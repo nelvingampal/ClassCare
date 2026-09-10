@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Daily Attendance Kiosk · ClassCare</title>
+  <link rel="stylesheet" href="../js/styles.css" />
+  <link rel="stylesheet" href="../js/holistic.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../config/firebase-config.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/toast.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script src="../js/telegram-alert.js"></script>
+  <script src="../js/offline-sync.js"></script>
+  <script src="../js/holistic-core.js" defer></script>
+  <script src="../js/kiosk-data.js" defer></script>
+  <script src="./hand-gestures.js" defer></script>
+  <script src="./scanner.js" defer></script>
+</head>
+<body data-kiosk="attendance">
+  <main class="cc-page">
+    <header class="cc-header">
+      <div>
+        <p class="cc-kicker">ClassCare · High-Accuracy Attendance Kiosk</p>
+        <h1 id="kiosk-title">Daily Attendance Kiosk</h1>
+        <p id="kiosk-description">Hold student ID QR card in front of the camera or enter ID below.</p>
+      </div>
+      <nav class="cc-links" aria-label="Teacher tools">
+        <a class="btn btn-secondary" href="index.html">Teacher portal</a>
+        <a class="btn btn-secondary active" href="scanner.html" aria-current="page">Daily Attendance</a>
+        <a class="btn btn-secondary" href="deep-check.html">Deep Emotional Check</a>
+        <a class="btn btn-secondary" href="summative.html">Summative Scores</a>
+      </nav>
+    </header>
+
+    <div id="auth-required" class="cc-card">
+      Sign in with an approved teacher or administrator account in the <a href="index.html">Teacher portal</a>.
+    </div>
+
+    <!-- Hidden compatibility markers for legacy state selectors -->
+    <div id="view-dashboard" class="hidden" aria-hidden="true"></div>
+    <div id="app-shell" class="hidden" aria-hidden="true"></div>
+
+    <div id="kiosk-content" style="margin-top: 16px;">
+      <div class="scanner-grid" style="grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr); gap: 20px;">
+        <!-- Left Column: Camera Viewport & Controls -->
+        <div class="scanner-surface" style="border-radius: 18px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.25);">
+          <div class="scanner-surface-header" style="padding: 14px 20px; background: rgba(15, 23, 42, 0.95);">
+            <div>
+              <h3 class="scanner-surface-title" style="font-size: 1.05rem; font-weight: 800; color: #f8fafc;">QR Camera Viewfinder</h3>
+              <p class="scanner-surface-copy" style="font-size: 0.8rem; color: #94a3b8;">High-speed 1080p sensor · Auto-focus &amp; long distance scanning enabled</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span id="scan-status" class="status-badge status-not-recorded" style="font-weight: 700; padding: 4px 10px;">Camera off</span>
+              <button id="btn-flip-camera" class="btn btn-ghost btn-icon-sm" type="button" title="Flip / switch camera" aria-label="Flip camera" style="color: #cbd5e1;">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l4-4m-4 4l-4-4"/></svg>
+              </button>
+              <button id="btn-toggle-fullscreen" class="btn btn-ghost btn-icon-sm" type="button" title="Full screen" aria-label="Toggle full screen" style="color: #cbd5e1;">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="scanner-frame-wrap" id="camera-frame-wrap" style="aspect-ratio: 4/3; min-height: 340px; position: relative; background: #090d16;">
+            <div id="scanner-root" style="width: 100%; height: 100%; position: relative;">
+              <div id="scanner-empty" class="scanner-empty" style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 5;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">📷</div>
+                <strong style="font-size: 1.15rem; color: #f8fafc;">Camera Ready</strong>
+                <span style="font-size: 0.85rem; color: #94a3b8; max-width: 260px; margin-top: 4px;">Start camera to begin high-accuracy long-distance scanning.</span>
+              </div>
+            </div>
+            <div class="scan-frame" aria-hidden="true"><div class="scan-laser"></div></div>
+          </div>
+
+          <div class="scanner-controls" style="padding: 14px 20px; background: rgba(15, 23, 42, 0.9); display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <button id="btn-start-scan" class="btn btn-primary" type="button" style="font-weight: 750; padding: 9px 20px;">
+              <span>▶ Start camera</span>
+            </button>
+            <button id="btn-stop-scan" class="btn btn-secondary hidden" type="button" style="font-weight: 750; padding: 9px 20px;">
+              <span>⏹ Stop camera</span>
+            </button>
+            <button id="btn-camera-zoom" class="btn btn-secondary btn-sm" type="button" title="Distance Zoom: scan from far away" style="font-weight: 750; border-radius: 8px; color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); padding: 7px 12px;">
+              <span>🔍 Zoom: 1.0x</span>
+            </button>
+            <button id="btn-camera-lighting" class="btn btn-secondary btn-sm" type="button" title="Auto-Lighting & Contrast Boost" style="font-weight: 750; border-radius: 8px; color: #facc15; border: 1px solid rgba(250, 204, 21, 0.35); padding: 7px 12px;">
+              <span>☀️ Light: Auto</span>
+            </button>
+            <span style="flex: 1;"></span>
+            <span id="kiosk-session-count" class="status-badge" style="background: rgba(255,255,255,0.08); color: #cbd5e1; font-weight: 700; border: 1px solid rgba(255,255,255,0.12);">
+              0 Recorded
+            </span>
+          </div>
+
+          <!-- Manual Code Entry Form -->
+          <details class="manual-panel" style="margin: 14px 20px 20px; background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 12px; padding: 12px 16px;">
+            <summary style="font-size: 0.88rem; font-weight: 700; color: #94a3b8; cursor: pointer;">
+              ⌨️ Manual Student ID / QR Entry
+            </summary>
+            <div class="manual-row" style="margin-top: 10px; display: flex; gap: 8px;">
+              <input id="manual-qr-input" class="field" placeholder="Type Student ID or paste QR code" style="flex: 1;" autocomplete="off" />
+              <button id="btn-manual-scan" class="btn btn-primary" type="button" style="font-weight: 700;">Find student</button>
+            </div>
+          </details>
+        </div>
+
+        <!-- Right Column: Isolated Scanned Student Profile Card (FERPA Data Protection) -->
+        <div class="scan-result" id="scanned-student-card" style="border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: flex; flex-direction: column;">
+          <div class="scan-result-header" style="padding: 20px; border-bottom: 1px solid var(--border);">
+            <div>
+              <h3 class="scan-result-title" style="font-size: 1.15rem; font-weight: 800;">Verification &amp; Arrival</h3>
+              <p class="scan-result-copy" style="font-size: 0.82rem; color: var(--text-muted); margin-top: 2px;">Real-time student card &amp; mood status</p>
+            </div>
+            <span id="scanned-status-badge" class="status-badge-lg idle" style="font-weight: 800; padding: 6px 14px; border-radius: 8px; font-size: 0.82rem;">
+              NOT SCANNED
+            </span>
+          </div>
+
+          <div class="scan-result-body" style="padding: 20px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div id="scan-status-strip" class="scan-status-line" style="display: flex; align-items: center; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+                <div id="scan-emoji" class="scan-status-icon" style="width: 38px; height: 38px; font-size: 1.1rem; border-radius: 50%; display: grid; place-items: center;">i</div>
+                <div>
+                  <div id="scan-status-label" class="scan-status-label" style="font-size: 0.95rem; font-weight: 800;">Awaiting scan</div>
+                  <div id="scan-status-sub" class="scan-status-sub" style="font-size: 0.8rem; color: var(--text-muted);">Position QR code inside the target guide</div>
+                </div>
+              </div>
+
+              <div class="scan-student" style="display: flex; align-items: center; gap: 16px; margin-top: 20px;">
+                <div id="scan-avatar" class="scan-avatar" style="width: 72px; height: 72px; border-radius: 14px; display: grid; place-items: center; overflow: hidden; background: var(--bg-muted); border: 2px solid var(--border);">
+                  <img id="scanned-photo-img" class="hidden" alt="Student photo" style="width: 100%; height: 100%; object-fit: cover;" />
+                  <span id="scanned-avatar-initials" style="font-size: 1.5rem; font-weight: 800; color: var(--text-muted);">ID</span>
+                </div>
+                <div>
+                  <div id="scanned-student-name" class="scan-name" style="font-size: 1.25rem; font-weight: 850;">Awaiting QR Scan</div>
+                  <div id="scanned-student-id" class="scan-meta" style="font-size: 0.88rem; color: var(--text-muted); margin-top: 3px;">ID: —</div>
+                  <div id="scanned-student-section" class="scan-meta" style="font-size: 0.88rem; color: var(--text-muted);">Section: —</div>
+                </div>
+              </div>
+
+              <div class="scan-detail-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 22px; background: var(--panel-muted); padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border-subtle);">
+                <div>
+                  <div class="scan-detail-label" style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em;">Time In</div>
+                  <div id="scanned-time-in" class="scan-detail-value" style="font-size: 1.15rem; font-weight: 800; margin-top: 3px;">—</div>
+                </div>
+                <div>
+                  <div class="scan-detail-label" style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em;">Arrival Window</div>
+                  <div id="scanned-arrival-note" class="scan-detail-value" style="font-size: 0.95rem; font-weight: 700; margin-top: 3px; color: var(--text-secondary);">—</div>
+                </div>
+              </div>
+            </div>
+
+            <div id="scan-alert-row" class="scan-alert" style="margin-top: 20px; padding: 12px 14px; border-radius: 10px; font-size: 0.82rem; line-height: 1.4; display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: var(--bg-muted);">
+              <span>🔔</span>
+              <span id="scanned-parent-text" style="color: var(--text-muted);">Parent notification dispatch status will appear here after attendance is logged.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Full-screen Emotion & Wellbeing Kiosk Overlay -->
+  <div id="emotion-overlay" class="wellbeing-overlay hidden" style="position: fixed; inset: 0; z-index: 9999; background: rgba(15, 23, 42, 0.94); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; padding: 20px;" role="dialog" aria-modal="true" aria-labelledby="kiosk-step-title">
+    <div style="background: var(--bg-card, #ffffff); border-radius: 28px; max-width: 620px; width: 100%; box-shadow: 0 25px 60px rgba(0,0,0,0.5); overflow: hidden; border: 1px solid var(--border);">
+      <div style="padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--panel-muted, #f8fafc);">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="brand-mark" style="width: 34px; height: 34px; font-size: 1rem; border-radius: 10px;">C</div>
+          <div>
+            <strong id="kiosk-student-name" style="display: block; font-size: 1.1rem; font-weight: 850;">Student</strong>
+            <span id="kiosk-step-indicator" style="font-size: 0.78rem; color: #6366f1; font-weight: 800; text-transform: uppercase;">Step 1 of 3: Mood</span>
+          </div>
+        </div>
+        <button id="btn-skip-emotion" type="button" class="btn btn-ghost btn-sm" style="color: var(--text-muted); font-weight: 700;">
+          Skip check-in
+        </button>
+      </div>
+
+      <!-- Live Hand Gesture Camera Feedback Bar -->
+      <div id="kiosk-gesture-bar" style="padding: 14px 24px 0; display: flex; align-items: center; gap: 14px;">
+        <div style="width: 76px; height: 58px; border-radius: 12px; overflow: hidden; background: #090d16; border: 2px solid #6366f1; flex-shrink: 0; position: relative;">
+          <video id="scanner-gesture-video" muted autoplay playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block;"></video>
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span id="scanner-gesture-status" style="font-size: 0.8rem; font-weight: 750; color: #4338ca;">AI Gesture Sensor active</span>
+            <span style="font-size: 0.72rem; color: var(--text-muted, #64748b);">Hold fingers to choose</span>
+          </div>
+          <progress id="scanner-gesture-progress" max="1" value="0" aria-label="Gesture hold progress" style="width: 100%; height: 6px; border-radius: 3px; display: block; margin-top: 5px;"></progress>
+        </div>
+      </div>
+
+      <!-- Question Content -->
+      <div id="kiosk-question-wrap" style="padding: 20px 24px 28px;">
+        <h2 id="kiosk-step-title" style="margin: 0 0 6px; font-size: 1.45rem; font-weight: 850; text-align: center;">How are you feeling today?</h2>
+        <p id="kiosk-step-desc" style="margin: 0 0 20px; text-align: center; color: var(--text-muted); font-size: 0.92rem;">Show 1–4 fingers, or tap a card below.</p>
+        <div id="kiosk-choices-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;"></div>
+      </div>
+
+      <!-- Celebratory Success Screen -->
+      <div id="kiosk-success-screen" class="hidden" style="padding: 44px 24px; text-align: center;">
+        <div style="font-size: 3.6rem; margin-bottom: 12px; animation: bounce 1s infinite;">🎉</div>
+        <h2 style="font-size: 1.65rem; font-weight: 850; margin: 0 0 6px; color: var(--text-primary, #0f172a);">Attendance &amp; Check-in Complete! Have a great day! 🎉</h2>
+        <p style="font-size: 1rem; color: var(--text-muted); margin: 0;">Attendance and mood recorded for <strong id="kiosk-success-student-name" style="color: #4f46e5;">Student</strong>.</p>
+        <div style="margin-top: 14px; display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; color: #065f46; font-weight: 750; font-size: 0.85rem; padding: 5px 14px; border-radius: 9999px; border: 1px solid #a7f3d0;">
+          <span>✓</span> Instant real-time portal sync complete
+        </div>
+        <p style="font-size: 0.82rem; color: #94a3b8; margin-top: 16px;">Ready for next student in 2 seconds…</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

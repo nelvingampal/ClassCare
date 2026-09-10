@@ -1,0 +1,4 @@
+node_modules/
+.tools/
+*-debug.log
+test-results/

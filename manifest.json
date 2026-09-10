@@ -1,0 +1,33 @@
+{
+  "name": "ClassCare — Student Wellness & Attendance",
+  "short_name": "ClassCare",
+  "description": "Student attendance, wellness check-ins, QR IDs, grading, help desk, and parent notifications — all in one place.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F8FAFC",
+  "theme_color": "#1D4ED8",
+  "lang": "en-US",
+  "categories": ["education", "productivity", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Student Portal",
+      "short_name": "Student",
+      "description": "View your student ID, attendance, and grades.",
+      "url": "./student/index.html"
+    },
+    {
+      "name": "Teacher Portal",
+      "short_name": "Teacher",
+      "description": "Scan student QR codes, record attendance, and manage grades.",
+      "url": "./teacher/index.html"
+    },
+    {
+      "name": "Admin Portal",
+      "short_name": "Admin",
+      "description": "Manage users, review attendance, and configure system settings.",
+      "url": "./admin/index.html"
+    }
+  ]
+}

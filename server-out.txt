@@ -1,0 +1,2 @@
+Campus is running at http://localhost:5500/
+Press Ctrl+C to stop the server.

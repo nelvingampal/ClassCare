@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>ClassCare — Emotional Well-being & Attendance Platform</title>
+  <meta name="description" content="ClassCare — Emotional well-being tracking grounded in constructivist pedagogy, contactless QR attendance, academic reflection, and real-time parent alerts." />
+  <meta name="theme-color" content="#0A4479" />
+  <meta name="sw-root" content="./" />
+  <link rel="manifest" href="./manifest.json" />
+  
+  <!-- Firebase & Application Core Engine -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="./js/config.js"></script>
+  <script src="./config/firebase-config.js"></script>
+  <script src="./js/theme.js"></script>
+  <script src="./js/toast.js"></script>
+  <script src="./js/utils.js"></script>
+  <script src="./js/ui.js"></script>
+  <script src="./js/offline-sync.js"></script>
+  <script src="./js/register-sw.js"></script>
+  <script src="./js/app.js" defer></script>
+  <link rel="stylesheet" href="./js/styles.css" />
+</head>
+<body class="public-page">
+
+  <!-- Sticky Glassmorphism Header -->
+  <header class="public-header">
+    <div class="public-header-inner">
+      <a class="brand" href="./index.html" aria-label="ClassCare home">
+        <span class="brand-mark">C</span>
+        <span>
+          <span class="brand-title">ClassCare</span>
+          <span class="brand-subtitle">Student Wellness &amp; Attendance</span>
+        </span>
+      </a>
+
+      <nav class="public-header-nav" aria-label="Primary Navigation">
+        <a href="#hero" class="public-nav-item">Home</a>
+        <a href="#features" class="public-nav-item">Well-Being</a>
+        <a href="#process" class="public-nav-item">How It Works</a>
+        <a href="#portals" class="public-nav-item">Portals</a>
+      </nav>
+
+      <div class="public-header-actions">
+        <!-- User Session Chip (Managed dynamically by js/app.js) -->
+        <div id="user-chip" class="topbar-user hidden" aria-live="polite">
+          <span id="user-avatar" class="user-avatar">?</span>
+          <span id="user-name" class="user-name">—</span>
+          <button id="btn-logout" type="button" class="btn btn-ghost btn-icon-sm" aria-label="Sign out" title="Sign out">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 16l4-4-4-4M21 12H7M13 5V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h5a2 2 0 0 0 2-2v-1"/></svg>
+          </button>
+        </div>
+
+        <!-- Color Theme Toggle -->
+        <button data-toggle="theme" class="btn btn-ghost btn-icon-sm" type="button" aria-label="Toggle color theme" title="Toggle color theme">
+          <svg data-theme-icon="light" class="icon-sm hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></svg>
+          <svg data-theme-icon="dark" class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M20.5 14.7A8.5 8.5 0 0 1 9.3 3.5 8.5 8.5 0 1 0 20.5 14.7Z"/></svg>
+        </button>
+
+        <a href="#portals" class="btn btn-yellow btn-sm" style="font-weight:800;border-radius:var(--radius-pill);padding:8px 18px;">
+          Login to Portal
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="public-main">
+
+    <!-- 1. HERO SECTION (Split-Screen Modern EdTech Startup "The Hook") -->
+    <section id="hero" class="hero-split-section">
+      <div class="public-container">
+        <div class="hero-split-grid">
+          
+          <!-- Left Column: Value Proposition & Portal Directory -->
+          <div class="hero-text-col">
+            <div class="hero-pill-badge">
+              <span class="badge-dot"></span>
+              <span>CONSTRUCTIVIST PEDAGOGY &amp; WELL-BEING PLATFORM</span>
+            </div>
+
+            <h1 class="hero-headline">
+              Emotional Well-being Tracking <span class="text-gradient-accent">for Every Student.</span>
+            </h1>
+
+            <p class="hero-subheadline">
+              A peaceful, constructivist platform empowering students and educators through real-time emotional check-ins, proactive care alerts, and caring classroom dialogue.
+            </p>
+
+            <div class="hero-action-row">
+              <a href="#portals" class="btn-hero-primary">
+                <span>Enter Your Portal</span>
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </a>
+              <a href="#features" class="btn-hero-yellow">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                <span>Explore Well-Being</span>
+              </a>
+            </div>
+
+            <!-- Role Selector Directory (Managed & routed by js/app.js) -->
+            <div id="portals" style="width:100%;">
+              <div class="hero-role-selector-title">Select Your Assigned Role</div>
+              <div id="guest-cta" class="role-directory" aria-label="Choose your portal">
+                <a class="role-row" href="./student/index.html">
+                  <div class="role-row-top">
+                    <span class="role-number">01</span>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </div>
+                  <div>
+                    <div class="role-name">Student Portal</div>
+                    <div class="role-description">Digital ID, vibe check, reflection &amp; confidential support</div>
+                  </div>
+                </a>
+
+                <a class="role-row" href="./teacher/index.html">
+                  <div class="role-row-top">
+                    <span class="role-number">02</span>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </div>
+                  <div>
+                    <div class="role-name">Teacher Portal</div>
+                    <div class="role-description">QR scanner, care alerts, class vibe &amp; academic records</div>
+                  </div>
+                </a>
+
+                <a class="role-row" href="./admin/index.html">
+                  <div class="role-row-top">
+                    <span class="role-number">03</span>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </div>
+                  <div>
+                    <div class="role-name">IT Administrator</div>
+                    <div class="role-description">System configuration, users, analytics &amp; audit trails</div>
+                  </div>
+                </a>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right Column: 3D Visual Illustration with Floating Glassmorphic Badges -->
+          <div class="hero-visual-col" aria-hidden="true">
+            <div class="hero-3d-wrapper">
+              
+              <!-- Floating Micro-Badge Top Left: Vibe Check -->
+              <div class="hero-badge-float hero-badge-top-left">
+                <div class="badge-icon-pill badge-icon-mint">✨</div>
+                <div>
+                  <div class="hero-badge-text-title">94% Positive Vibe Check</div>
+                  <div class="hero-badge-text-sub">Real-time classroom climate</div>
+                </div>
+              </div>
+
+              <!-- Main 3D Isometric Card -->
+              <div class="hero-3d-card">
+                <img src="./assets/hero-3d.jpg" alt="ClassCare 3D Educational Ecosystem Illustration" width="800" height="600" loading="eager" />
+              </div>
+
+              <!-- Floating Micro-Badge Bottom Right: Instant Attendance -->
+              <div class="hero-badge-float hero-badge-bottom-right">
+                <div class="badge-icon-pill badge-icon-blue">⚡</div>
+                <div>
+                  <div class="hero-badge-text-title">100% On-Time Record</div>
+                  <div class="hero-badge-text-sub">Contactless 150ms scan latency</div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. CORE WELL-BEING FEATURES (Alternating Pastel Feature Cards) -->
+    <section id="features" class="features-pastel-section">
+      <div class="public-container">
+        
+        <div class="section-head-center">
+          <span class="section-tag">HOLISTIC WELL-BEING</span>
+          <h2 class="section-title">Designed for Empathy, Built for Performance</h2>
+          <p class="section-subtitle">
+            Every feature is calibrated around constructivist learning scaffolding, immediate feedback loops, and transparent school community trust.
+          </p>
+        </div>
+
+        <div class="pastel-cards-grid">
+          
+          <!-- Card 1: Attendance -> Pastel Light Green (#EFF9F3) -->
+          <article class="pastel-feature-card feature-card-green">
+            <div class="feature-icon-wrap">
+              <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            </div>
+            <h3 class="feature-title">Contactless QR Attendance &amp; Parent Sync</h3>
+            <p class="feature-desc">
+              Scan student IDs in under 150ms with camera auto-focus, offline local queuing, and automated parent arrival SMS/Email alerts through EmailJS &amp; Telegram.
+            </p>
+            <div class="feature-chip-stat">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>150ms Scan Latency &bull; Instant Sync</span>
+            </div>
+          </article>
+
+          <!-- Card 2: Scores -> Pastel Light Yellow (#FEF8E7) -->
+          <article class="pastel-feature-card feature-card-yellow">
+            <div class="feature-icon-wrap">
+              <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+            </div>
+            <h3 class="feature-title">Constructivist Growth &amp; Academic Reflection</h3>
+            <p class="feature-desc">
+              Bridge cognitive readiness with academic performance. Track learning progress, scaffold student growth curves, and generate report slips with ease.
+            </p>
+            <div class="feature-chip-stat">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Holistic Growth &bull; Reflective Learning</span>
+            </div>
+          </article>
+
+          <!-- Card 3: Support Feelings -> Pastel Light Blue (#EDF6FC) -->
+          <article class="pastel-feature-card feature-card-blue">
+            <div class="feature-icon-wrap">
+              <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            </div>
+            <h3 class="feature-title">Emotional Well-Being &amp; Care Alerts</h3>
+            <p class="feature-desc">
+              Students self-report classroom vibes via non-punitive check-ins. Faculty receive proactive multi-day distress flags and confidential "Talk to Someone" pastoral inquiries.
+            </p>
+            <div class="feature-chip-stat">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Safe &bull; Confidential &bull; Proactive</span>
+            </div>
+          </article>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 3. HOW CLASSCARE WORKS (Process Flow Section) -->
+    <section id="process" class="process-flow-section">
+      <div class="public-container">
+        <div class="section-head-center">
+          <span class="section-tag">FRICTIONLESS WORKFLOW</span>
+          <h2 class="section-title">How ClassCare Works in Everyday Classrooms</h2>
+          <p class="section-subtitle">A seamless 3-step loop that keeps classroom learning grounded and parents informed.</p>
+        </div>
+
+        <div class="process-steps-grid">
+          
+          <div class="process-step-card">
+            <span class="process-step-num">STEP 01</span>
+            <h3>Student Scans In</h3>
+            <p>Each student presents their unique, encrypted QR credential via physical card or mobile wallet upon classroom entry.</p>
+          </div>
+
+          <div class="process-step-card">
+            <span class="process-step-num">STEP 02</span>
+            <h3>Vibe Check Prompt</h3>
+            <p>A quick, 2-second non-intrusive mood check-in prompts the student to express how they feel—powering constructivist teaching guidance.</p>
+          </div>
+
+          <div class="process-step-card">
+            <span class="process-step-num">STEP 03</span>
+            <h3>Coordinated Action</h3>
+            <p>Attendance logs, parents receive instant arrival alerts, and teachers see actionable well-being indicators for tailored instructional support.</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. BOTTOM CTA BANNER -->
+    <section class="bottom-cta-wrap">
+      <div class="public-container">
+        <div class="bottom-cta-card">
+          <div class="bottom-cta-text">
+            <h2>Ready to transform your school's daily pulse?</h2>
+            <p>Step into the modern standard for educational emotional climate and attendance management.</p>
+          </div>
+          <div class="bottom-cta-actions">
+            <a href="./teacher/index.html" class="btn-hero-yellow">Teacher Portal</a>
+            <a href="./student/index.html" class="btn btn-secondary btn-sm" style="color:#ffffff;border-color:rgba(255,255,255,0.4);border-radius:var(--radius-pill);padding:12px 22px;">Student Portal</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Public Footer -->
+    <footer class="public-footer public-container">
+      <div>
+        <strong>ClassCare &bull; Educational Wellness Platform</strong>
+        <span style="display:block;margin-top:4px;color:var(--text-muted);font-size:11.5px;">Grounded in Constructivist Pedagogy &amp; Student Emotional Well-Being.</span>
+      </div>
+      <div>
+        <a href="./student/index.html">Student Portal</a> &bull;
+        <a href="./teacher/index.html">Teacher Portal</a> &bull;
+        <a href="./admin/index.html">IT Admin</a>
+      </div>
+    </footer>
+
+  </main>
+
+  <footer class="app-bottom-banner">CLASSCARE &bull; LIVE DATABASE CONNECTED</footer>
+
+</body>
+</html>

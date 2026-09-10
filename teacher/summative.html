@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Summative Scores · ClassCare</title><link rel="stylesheet" href="../js/styles.css"><link rel="stylesheet" href="../js/holistic.css">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" defer></script>
+<script src="../js/config.js" defer></script><script src="../config/firebase-config.js" defer></script>
+<script src="../js/theme.js" defer></script><script src="../js/utils.js" defer></script>
+<script src="../js/holistic-core.js" defer></script><script src="../js/kiosk-data.js" defer></script>
+<script src="summative.js" defer></script><script src="../js/holistic-portals.js" defer></script></head><body data-role="teacher"><main class="cc-page">
+<header class="cc-header"><div><p class="cc-kicker">ClassCare · Weekly learning</p><h1>Summative Scores</h1></div><nav class="cc-links" aria-label="Teacher tools"><a class="btn btn-secondary" href="index.html">Teacher portal</a><a class="btn btn-secondary" href="scanner.html">Daily Attendance</a><a class="btn btn-secondary" href="deep-check.html">Deep Emotional Check</a><a class="btn btn-secondary active" href="summative.html" aria-current="page">Summative Scores</a></nav></header>
+<p id="auth-required" class="cc-card">Sign in to the <a href="index.html">Teacher portal</a> with an approved staff account.</p>
+<div id="summative-content" hidden><section class="cc-card"><h2>Schedule an assessment</h2><p>Students see published dates immediately. The date, section, maximum score, and care threshold are fixed after publishing.</p>
+<form id="assessment-form" class="cc-form"><label>Title<input name="title" required maxlength="150" placeholder="e.g. Unit 3 Summative Quiz"></label><label>Subject<input name="subject" required maxlength="100" placeholder="e.g. Mathematics"></label>
+<label>Section<select id="assessment-section" name="section" required></select></label><label>Assessment date<input type="date" id="assessment-date" name="scheduledDate" required></label>
+<label>Maximum score<input type="number" name="maxScore" min="1" max="10000" value="100" required></label><label>Care threshold (%)<input type="number" name="thresholdPercent" min="0" max="100" step="any" value="75" required></label>
+<button id="publish-assessment" class="btn btn-primary" type="submit">Publish assessment</button></form></section>
+<section class="cc-card"><h2>Section score sheet</h2><p id="score-live" class="cc-live" role="status">Connecting…</p>
+<div class="cc-stat-ribbon">
+  <div class="cc-stat-card"><span class="cc-stat-num" id="stat-roster-count">0</span><span class="cc-stat-lbl">Enrolled Students</span></div>
+  <div class="cc-stat-card"><span class="cc-stat-num" id="stat-graded-count">0</span><span class="cc-stat-lbl">Scores Entered</span></div>
+  <div class="cc-stat-card"><span class="cc-stat-num" id="stat-average-score">—</span><span class="cc-stat-lbl">Class Average</span></div>
+  <div class="cc-stat-card cc-stat-alert"><span class="cc-stat-num" id="stat-care-alerts">0</span><span class="cc-stat-lbl">Care Flags (&lt; threshold)</span></div>
+</div>
+<div class="cc-toolbar"><label>Assessment <select id="assessment-select"><option value="">Choose an assessment</option></select></label><div><button id="save-scores" class="btn btn-primary" type="button">Save scores</button><button id="discard-edits" class="btn btn-secondary" type="button">Discard edits</button></div></div>
+<p id="score-description"></p><p>Use Tab, Enter, or ↑/↓ to move between scores. Paste one column from Excel. A blank means not graded; clearing a saved score removes it when you save.</p>
+<div class="cc-table-wrap"><table class="cc-grid"><caption class="u-sr-only">Student summative scores</caption><thead><tr><th scope="col">#</th><th scope="col">Student</th><th scope="col">Student ID</th><th scope="col">Score</th><th scope="col">Saved percent</th><th scope="col">Status</th></tr></thead><tbody id="score-rows"></tbody></table></div>
+<p id="score-status" class="cc-status" role="status" aria-live="polite"></p></section></div></main></body></html>

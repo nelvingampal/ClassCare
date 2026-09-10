@@ -1,0 +1,720 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>ClassCare · Student</title>
+  <meta name="theme-color" content="#1D4ED8" />
+  <meta name="sw-root" content="../" />
+  <link rel="manifest" href="../manifest.json" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../config/firebase-config.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/toast.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="../js/offline-sync.js"></script>
+  <script src="../js/register-sw.js"></script>
+  <script src="../js/ai-knowledge.js" defer></script>
+  <script src="../js/chatbot.js" defer></script>
+  <script src="./register.js" defer></script>
+  <script src="./dashboard.js" defer></script>
+  <script src="./grades.js" defer></script>
+  <script src="./enrollment.js" defer></script>
+  <script src="./emotional-checkin.js" defer></script>
+  <script src="./concern.js" defer></script>
+  <script src="../js/shell.js" defer></script>
+  <link rel="stylesheet" href="../js/styles.css" />
+<link rel="stylesheet" href="../js/holistic.css">
+<script src="../js/holistic-core.js" defer></script>
+<script src="../js/holistic-portals.js" defer></script>
+</head>
+<body data-role="student" class="public-page">
+  <div id="public-view" class="public-page">
+    <header class="public-header">
+      <div class="public-header-inner">
+        <a class="brand" href="../index.html" aria-label="ClassCare home"><span class="brand-mark">C</span><span><span class="brand-title">ClassCare</span><span class="brand-subtitle">Student</span></span></a>
+        <div class="public-header-actions">
+          <a class="btn btn-ghost btn-sm" href="../index.html">All workspaces</a>
+          <button data-toggle="theme" class="btn btn-ghost btn-icon-sm" type="button" aria-label="Toggle color theme" title="Toggle color theme"><svg data-theme-icon="light" class="icon-sm hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></svg><svg data-theme-icon="dark" class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M20.5 14.7A8.5 8.5 0 0 1 9.3 3.5 8.5 8.5 0 1 0 20.5 14.7Z"/></svg></button>
+        </div>
+      </div>
+    </header>
+    <main class="public-main">
+      <section id="view-guest" class="auth-layout">
+        <aside class="auth-aside">
+          <div>
+            <p class="kicker">Student Portal</p>
+            <h1>Your Emotional Well-Being Space</h1>
+            <p>Access your student digital ID, share how you feel each morning, and reach out to someone whenever you need support.</p>
+          </div>
+
+          <div class="auth-3d-visual-wrap" aria-hidden="true">
+            <div class="auth-3d-graphic">
+              <img src="../assets/auth-student.jpg" alt="Student Emotional Well-Being Illustration" width="300" height="300" loading="eager" />
+            </div>
+            <div class="auth-floating-badge">
+              <span>✨ Daily Vibe Check &bull; Safe &amp; Supportive</span>
+            </div>
+          </div>
+
+          <ul class="requirements" aria-label="Student portal features">
+            <li><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg><span>Digital QR ID for smooth arrival</span></li>
+            <li><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg><span>Daily emotional check-ins &amp; reflection</span></li>
+            <li><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg><span>Confidential "Talk to Someone" support</span></li>
+          </ul>
+        </aside>
+        <section class="auth-card" aria-labelledby="student-account-title">
+          <div class="auth-card-header"><div><h2 id="student-account-title">Student account</h2><p class="auth-card-copy">Create an account or sign in to continue.</p></div></div>
+          <div class="tabs" role="tablist" aria-label="Student account actions">
+            <button type="button" id="tab-btn-login" class="tab-btn active" role="tab" aria-selected="true" aria-controls="form-login">Sign in</button>
+            <button type="button" id="tab-btn-register" class="tab-btn" role="tab" aria-selected="false" aria-controls="form-register">Register</button>
+          </div>
+
+          <form id="form-login" class="form-stack" autocomplete="on" role="tabpanel" aria-labelledby="tab-btn-login">
+            <div><label class="field-label" for="student-login-username">Username or email</label><input id="student-login-username" name="username" type="text" class="field" placeholder="juan.delacruz or student@example.com" required maxlength="60" autocomplete="username" /></div>
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <label class="field-label" for="student-login-password">Password</label>
+                <button type="button" id="student-forgot-pwd" class="btn-link" style="background:none;border:none;color:var(--c-primary);font-size:0.8rem;cursor:pointer;padding:0;">Forgot password?</button>
+              </div>
+              <input id="student-login-password" name="password" type="password" class="field" placeholder="Your password" required minlength="6" autocomplete="current-password" />
+            </div>
+            <button type="submit" id="btn-do-login" class="btn btn-primary btn-block">Sign in</button>
+            <p class="form-note">Use the username or email you registered. Your Student ID appears after sign-in.</p>
+            <div style="text-align:center;margin-top:6px;">
+              <span style="font-size:13px;color:var(--text-muted);">New student? </span>
+              <button type="button" id="link-to-register" class="btn-link" style="background:none;border:none;color:var(--c-primary);font-size:13px;font-weight:700;cursor:pointer;padding:0;">Create an account</button>
+            </div>
+          </form>
+
+          <form id="form-register" class="form-stack hidden" autocomplete="on" role="tabpanel" aria-labelledby="tab-btn-register" aria-hidden="true">
+            <div class="field-row cols-2">
+              <div><label class="field-label" for="student-first-name">First name</label><input id="student-first-name" name="first_name" class="field" placeholder="Juan" required maxlength="30" aria-describedby="student-first-name-error" /><span id="student-first-name-error" class="field-error" aria-live="polite"></span></div>
+              <div><label class="field-label" for="student-last-name">Last name</label><input id="student-last-name" name="last_name" class="field" placeholder="Dela Cruz" required maxlength="30" aria-describedby="student-last-name-error" /><span id="student-last-name-error" class="field-error" aria-live="polite"></span></div>
+            </div>
+            <div><label class="field-label" for="student-id-input">Student ID</label><input id="student-id-input" name="student_id" class="field" placeholder="e.g. 2024-1001" required maxlength="20" aria-describedby="student-id-error" /><span id="student-id-error" class="field-error" aria-live="polite"></span></div>
+            <div class="upload-block"><div class="upload-row"><img id="student-photo-preview" class="upload-preview hidden" alt="" /><div class="upload-copy"><strong>Photo</strong><span id="student-photo-name">Add a clear photo for your Student ID.</span></div><input id="student-photo-camera" type="file" accept="image/*" capture="user" class="hidden" /><input id="student-photo-library" type="file" accept="image/*" class="hidden" /><button type="button" id="btn-take-photo" class="btn btn-secondary btn-sm">Take photo</button><button type="button" id="btn-choose-photo" class="btn btn-ghost btn-sm">Choose file</button></div><span id="student-photo-error" class="field-error" aria-live="polite"></span></div>
+            <div><label class="field-label" for="student-username-input">Username</label><input id="student-username-input" name="username" type="text" class="field" placeholder="juan.delacruz" required maxlength="30" autocomplete="username" aria-describedby="student-username-error" /><span id="student-username-error" class="field-error" aria-live="polite"></span></div>
+            <div><label class="field-label" for="student-password-input">Password</label><input id="student-password-input" name="password" type="password" class="field" placeholder="At least 6 characters" required minlength="6" autocomplete="new-password" aria-describedby="student-password-error" /><span id="student-password-error" class="field-error" aria-live="polite"></span></div>
+            <div class="field-row cols-2">
+              <div><label class="field-label" for="student-parent-name-input">Parent or guardian name</label><input id="student-parent-name-input" name="parent_name" class="field" placeholder="e.g. Maria Dela Cruz" maxlength="60" /></div>
+              <div><label class="field-label" for="student-parent-input">Parent contact number / Telegram</label><input id="student-parent-input" name="parent_contact" class="field" placeholder="e.g. 09123456789" required maxlength="40" aria-describedby="student-parent-help student-parent-error" /><span id="student-parent-help" class="field-help">Phone number or Telegram contact.</span><span id="student-parent-error" class="field-error" aria-live="polite"></span></div>
+            </div>
+            <div><label class="field-label" for="student-parent-email-input">Parent or guardian email</label><input id="student-parent-email-input" name="parent_email" type="email" class="field" placeholder="parent@example.com" required maxlength="120" aria-describedby="student-parent-email-error" /><span id="student-parent-email-error" class="field-error" aria-live="polite"></span></div>
+            <div class="terms-block" id="student-terms-block" aria-labelledby="student-terms-title">
+              <div class="terms-block-header">
+                <strong id="student-terms-title">Terms and Conditions</strong>
+                <span class="terms-scroll-hint" id="student-terms-hint" aria-live="polite">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14m0 0 5-5m-5 5-5-5"/></svg>
+                  <span>Scroll to read</span>
+                </span>
+              </div>
+              <div class="terms-scroll-container" id="student-terms-scroll" tabindex="0" role="region" aria-label="Terms and Conditions text, scroll to read all content">
+                <div class="terms-content">
+                  <h1>TERMS AND CONDITIONS</h1>
+                  <p class="terms-meta"><strong>Effective Date:</strong> September 2026<br/><strong>Application Name:</strong> ClassCare</p>
+                  <p>Welcome to <em>ClassCare</em>, a student attendance and tardiness monitoring application designed to help schools, teachers, students, and parents efficiently monitor class attendance. The application uses <em>QR codes and QR scanning technology</em> to record attendance and tardiness and may send email notifications to registered parents or guardians.</p>
+                  <p>By accessing or using the application, you agree to comply with these Terms and Conditions.</p>
+                  <h3>1. Purpose of the Application</h3>
+                  <p>The application is developed to:</p>
+                  <ul>
+                    <li>Record student attendance through QR code scanning;</li>
+                    <li>Monitor and record student tardiness;</li>
+                    <li>Maintain organized digital attendance records;</li>
+                    <li>Provide authorized teachers and school personnel with attendance information; and</li>
+                    <li>Notify registered parents or guardians when their child records attendance.</li>
+                  </ul>
+                  <p>The application is intended solely for educational and attendance-monitoring purposes.</p>
+                  <h3>2. QR Code Attendance and Tardiness</h3>
+                  <p>Each student may be assigned a unique QR code that is used to record attendance.<br/>When a student's QR code is scanned, the system may record the following:</p>
+                  <ul>
+                    <li>Student name;</li>
+                    <li>Class or subject;</li>
+                    <li>Date of attendance;</li>
+                    <li>Time of scanning; and</li>
+                    <li>Attendance status, such as <em>Present, Late, or Absent</em>, based on the school's attendance rules.</li>
+                  </ul>
+                  <p>Students must use only their own assigned QR code.<br/>Students are prohibited from:</p>
+                  <ul>
+                    <li>Using another student's QR code;</li>
+                    <li>Allowing another person to scan their QR code;</li>
+                    <li>Sharing their QR code for attendance purposes;</li>
+                    <li>Creating or modifying QR codes;</li>
+                    <li>Attempting to manipulate attendance or tardiness records; or</li>
+                    <li>Circumventing the QR scanning system.</li>
+                  </ul>
+                  <h3>3. Attendance Records</h3>
+                  <p>Attendance and tardiness records generated through the application are intended to assist teachers and school administrators in monitoring student attendance.</p>
+                  <p>The application records attendance based on information captured through the QR scanning system. However, technical problems such as scanning errors, device malfunction, internet connection problems, or system interruptions may affect the recording of attendance.</p>
+                  <p>If a student believes that their attendance or tardiness record is incorrect, they should immediately report the concern to the appropriate teacher or school administrator for verification.</p>
+                  <h3>4. Parent/Guardian Email Notifications</h3>
+                  <p>The application may automatically send an <em>email notification to the registered parent or legal guardian</em> when their child successfully records attendance.<br/>The notification may contain:</p>
+                  <ul>
+                    <li>Student's name;</li>
+                    <li>Class or subject;</li>
+                    <li>Date;</li>
+                    <li>Time of attendance; and</li>
+                    <li>Attendance status.</li>
+                  </ul>
+                  <p>These notifications are provided to help parents or guardians monitor their child's attendance and are intended for legitimate educational and monitoring purposes.</p>
+                  <p>Parents or guardians are responsible for providing and maintaining a valid email address. The application may not be able to deliver notifications if the email address is incorrect, inactive, inaccessible, or if technical or internet-related problems occur.</p>
+                  <h3>5. Information Collected</h3>
+                  <p>To provide its attendance-monitoring services, the application may collect and process information such as:</p>
+                  <ul>
+                    <li>Student name;</li>
+                    <li>Student identification number;</li>
+                    <li>Class, section, or program;</li>
+                    <li>QR code or QR code identifier;</li>
+                    <li>Parent or guardian name;</li>
+                    <li>Parent or guardian email address;</li>
+                    <li>Attendance date and time;</li>
+                    <li>Attendance and tardiness status; and</li>
+                    <li>Other information necessary for the operation of the application.</li>
+                  </ul>
+                  <p>The application should only collect information that is necessary and relevant to its intended purpose.</p>
+                  <h3>6. Privacy and Protection of Information</h3>
+                  <p>The application shall take reasonable measures to protect student, parent, and attendance information against unauthorized access, disclosure, alteration, loss, or misuse.</p>
+                  <p>Information collected through the application shall be accessed only by authorized individuals for legitimate educational, administrative, or attendance-monitoring purposes.</p>
+                  <p>Where applicable, the collection, processing, storage, and sharing of personal information shall comply with the <em>Philippine Data Privacy Act of 2012 (Republic Act No. 10173)</em> and the applicable policies of the educational institution.</p>
+                  <h3>7. Use of Information</h3>
+                  <p>Attendance information may be used for purposes including:</p>
+                  <ul>
+                    <li>Monitoring student attendance;</li>
+                    <li>Identifying patterns of tardiness;</li>
+                    <li>Preparing attendance reports;</li>
+                    <li>Communicating attendance information to registered parents or guardians;</li>
+                    <li>Supporting school attendance management; and</li>
+                    <li>Performing other legitimate educational and administrative functions.</li>
+                  </ul>
+                  <p>The information shall not be used for purposes unrelated to the application's intended function without appropriate authorization.</p>
+                  <h3>8. User Responsibilities</h3>
+                  <p>Users agree to:</p>
+                  <ul>
+                    <li>Provide accurate information;</li>
+                    <li>Use the application only for its intended purpose;</li>
+                    <li>Keep their account information and QR code secure;</li>
+                    <li>Not share their QR code or login credentials with unauthorized individuals;</li>
+                    <li>Report incorrect attendance records to the appropriate school personnel;</li>
+                    <li>Respect the privacy of other students; and</li>
+                    <li>Follow applicable school rules and policies.</li>
+                  </ul>
+                  <h3>9. Prohibited Activities</h3>
+                  <p>Users must not:</p>
+                  <ul>
+                    <li>Falsify attendance information;</li>
+                    <li>Scan another student's QR code;</li>
+                    <li>Share or lend QR codes;</li>
+                    <li>Attempt to access another person's account without authorization;</li>
+                    <li>Modify attendance records without permission;</li>
+                    <li>Attempt to bypass or interfere with the QR scanning system;</li>
+                    <li>Introduce malicious software or code into the application; or</li>
+                    <li>Use the application for unlawful or unauthorized purposes.</li>
+                  </ul>
+                  <h3>10. System Availability and Technical Issues</h3>
+                  <p>The application is designed to provide reliable attendance monitoring. However, continuous availability cannot be guaranteed.<br/>Temporary interruptions may occur due to:</p>
+                  <ul>
+                    <li>Internet connectivity problems;</li>
+                    <li>Device or QR scanner malfunction;</li>
+                    <li>Server or system maintenance;</li>
+                    <li>Software updates;</li>
+                    <li>Technical errors; or</li>
+                    <li>Other circumstances beyond the reasonable control of the developers or school.</li>
+                  </ul>
+                  <p>In cases of system failure, the school may use an alternative attendance-recording procedure.</p>
+                  <h3>11. Accuracy of Parent Notifications</h3>
+                  <p>Email notifications are generated based on attendance information recorded by the application. A notification indicating that a student has attended class does not, by itself, replace the school's official attendance record.</p>
+                  <p>Parents or guardians who believe that an attendance notification is incorrect should contact the appropriate teacher or school administrator.</p>
+                  <h3>12. Account and Access</h3>
+                  <p>Access to certain features of the application may be limited to authorized students, teachers, parents, guardians, and school administrators.</p>
+                  <p>Users are responsible for keeping their login credentials confidential and must immediately report suspected unauthorized access to the application administrator.</p>
+                  <h3>13. Modification of the Application</h3>
+                  <p>The developers or authorized school administrators may modify, update, suspend, or discontinue certain features of the application when necessary for maintenance, security, improvement, or compliance with institutional policies.</p>
+                  <p>Users may be notified of significant changes when appropriate.</p>
+                  <h3>14. Suspension or Termination of Access</h3>
+                  <p>Access to the application may be suspended or terminated if a user:</p>
+                  <ul>
+                    <li>Violates these Terms and Conditions;</li>
+                    <li>Misuses the QR attendance system;</li>
+                    <li>Attempts to manipulate attendance records;</li>
+                    <li>Gains or attempts to gain unauthorized access; or</li>
+                    <li>Violates applicable school rules or policies.</li>
+                  </ul>
+                  <h3>15. Limitation of Responsibility</h3>
+                  <p>The application serves as a <em>digital attendance and tardiness monitoring tool</em>. While reasonable measures are taken to maintain accurate records, the developers do not guarantee that the system will always be free from technical errors, interruptions, or inaccuracies.</p>
+                  <p>Official decisions regarding attendance, tardiness, and related academic matters remain subject to the policies and verification procedures of the educational institution.</p>
+                  <h3>16. Contact and Support</h3>
+                  <p>For questions, concerns, attendance corrections, privacy concerns, or technical assistance, users may contact:</p>
+                  <ul>
+                    <li><strong>Application Administrator:</strong> School IT Administration Office</li>
+                    <li><strong>Email:</strong> support@classcare.edu</li>
+                    <li><strong>Contact Desk:</strong> IT Administration Helpdesk</li>
+                  </ul>
+                  <h3>17. Acceptance of Terms</h3>
+                  <p>By accessing or using <em>ClassCare</em>, you acknowledge that you have read, understood, and agreed to these Terms and Conditions.</p>
+                </div>
+              </div>
+              <div class="terms-checkbox-row" id="student-terms-checkbox-row">
+                <input type="checkbox" id="student-terms-checkbox" name="terms_agreed" disabled aria-describedby="student-terms-checkbox-sub" />
+                <label for="student-terms-checkbox" class="terms-checkbox-label">
+                  I have read and agree to the Terms and Conditions
+                  <span class="terms-checkbox-sub" id="student-terms-checkbox-sub">Scroll to the bottom of the text above to enable this checkbox.</span>
+                </label>
+              </div>
+            </div>
+            <button type="submit" id="btn-do-register" class="btn btn-primary btn-block" disabled><span>Create account</span></button>
+            <div style="text-align:center;margin-top:6px;">
+              <span style="font-size:13px;color:var(--text-muted);">Already have an account? </span>
+              <button type="button" id="link-to-login" class="btn-link" style="background:none;border:none;color:var(--c-primary);font-size:13px;font-weight:700;cursor:pointer;padding:0;">Sign in here</button>
+            </div>
+          </form>
+        </section>
+      </section>
+    </main>
+  </div>
+  <div id="app-shell" class="app-shell has-topnav hidden">
+    <!-- TOP NAVIGATION BAR (Replaces Sidebar) -->
+    <header class="classcare-topnav" role="banner">
+      <div class="classcare-topnav-inner">
+        <!-- Left: App Logo -->
+        <a class="classcare-brand-link" href="../index.html" aria-label="ClassCare Home">
+          <div class="classcare-brand-icon">C</div>
+          <span class="classcare-brand-name">ClassCare</span>
+        </a>
+
+        <!-- Center: Horizontal Navigation Links -->
+        <nav class="classcare-nav-links" aria-label="Main Navigation">
+          <a class="classcare-nav-item active nav-link" href="#student-emotion" id="nav-student-emotion">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            <span>Check-in</span>
+          </a>
+          <a class="classcare-nav-item nav-link" href="#student-id" id="nav-student-id">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8" cy="12" r="2"/><path d="M13 10h5M13 14h4"/></svg>
+            <span>Student ID</span>
+          </a>
+          <a class="classcare-nav-item nav-link" href="#student-attendance" id="nav-student-attendance">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg>
+            <span>Attendance</span>
+          </a>
+          <a class="classcare-nav-item nav-link" href="#student-grades" id="nav-student-grades">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <span>Grades</span>
+          </a>
+          <a class="classcare-nav-item nav-link" href="#student-concern" id="nav-student-concern">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22C6.48 22 2 17.52 2 12S6.48 2 12 2s10 4.48 10 10-4.48 10-10 10zm0-18C7.59 4 4 7.59 4 12s3.59 8 8 8 8-3.59 8-8-3.59-8-8-8zm-1 5h2v6h-2zm0 8h2v2h-2z"/></svg>
+            <span>Talk to Someone</span>
+          </a>
+          <a class="classcare-nav-item nav-link" href="#student-enrollment" id="nav-student-enrollment">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            <span>Enrollment</span>
+            <span id="nav-student-enrollment-badge" class="badge-status-closed hidden" style="font-size:0.65rem;padding:1px 5px;border-radius:4px;margin-left:4px;">CLOSED</span>
+          </a>
+          <a class="classcare-nav-item nav-link" href="#student-profile" id="nav-student-profile">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>Profile</span>
+          </a>
+        </nav>
+
+        <!-- Right: Profile & Actions -->
+        <div class="classcare-user-profile">
+          <button data-toggle="theme" class="btn btn-ghost btn-icon-sm" type="button" aria-label="Toggle color theme">
+            <svg data-theme-icon="light" class="icon-sm hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></svg>
+            <svg data-theme-icon="dark" class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20.5 14.7A8.5 8.5 0 0 1 9.3 3.5 8.5 8.5 0 1 0 20.5 14.7Z"/></svg>
+          </button>
+          <div id="user-chip" class="classcare-profile-card">
+            <div id="user-avatar" class="classcare-profile-avatar">SS</div>
+            <div class="classcare-profile-meta">
+              <span id="user-name" class="classcare-profile-name">—</span>
+              <span class="classcare-profile-role">Student</span>
+            </div>
+            <span class="classcare-profile-arrow">▾</span>
+            <button id="btn-logout" type="button" class="btn btn-ghost btn-icon-sm" aria-label="Sign out" title="Sign out" style="padding:2px;margin-left:2px;">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M17 16l4-4-4-4M21 12H7M13 5V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2-2h5a2 2 0 0 0 2-2v-1"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hidden compatibility stub for legacy scripts -->
+    <aside class="app-sidebar" style="display:none !important;" aria-hidden="true">
+      <nav class="nav-section">
+        <a class="nav-link active" href="#student-emotion">Emotional Check-in</a>
+        <a class="nav-link" href="#student-reflection">Self-Reflection Timeline</a>
+        <a class="nav-link" href="#student-concern">Talk to Someone</a>
+        <a class="nav-link" href="#student-id">Student ID &amp; QR</a>
+        <a class="nav-link" href="#student-attendance">Attendance</a>
+        <a class="nav-link" href="#student-grades">Subjects &amp; Grades</a>
+        <a class="nav-link" href="#student-enrollment">Enrollment</a>
+        <a class="nav-link" href="#student-profile">My Profile</a>
+        <a class="nav-link" href="#student-help">Help request</a>
+      </nav>
+      <div class="app-sidebar-footer"></div>
+    </aside>
+    <div class="sidebar-backdrop" aria-hidden="true" style="display:none !important;"></div>
+
+    <div class="app-main">
+      <div class="mobile-topbar"><button type="button" class="btn btn-ghost btn-icon-sm" data-mobile-menu aria-expanded="false" aria-label="Open navigation"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><span class="mobile-topbar-title">Emotional Well-Being</span><button data-toggle="theme" class="btn btn-ghost btn-icon-sm" type="button" aria-label="Toggle color theme"><svg data-theme-icon="light" class="icon-sm hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></svg><svg data-theme-icon="dark" class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20.5 14.7A8.5 8.5 0 0 1 9.3 3.5 8.5 8.5 0 1 0 20.5 14.7Z"/></svg></button></div>
+      <header class="app-topbar"><div class="topbar-context"><p class="topbar-title">Emotional Well-Being &amp; Self-Reflection</p><p class="topbar-subtitle">Check in with your feelings, reflect on your learning journey, or speak to someone privately.</p></div><div class="topbar-actions"><button data-toggle="theme" class="btn btn-ghost btn-icon-sm" type="button" aria-label="Toggle color theme" title="Toggle color theme"><svg data-theme-icon="light" class="icon-sm hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></svg><svg data-theme-icon="dark" class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M20.5 14.7A8.5 8.5 0 0 1 9.3 3.5 8.5 8.5 0 1 0 20.5 14.7Z"/></svg></button></div></header>
+      <main class="app-content"><section id="view-dashboard" class="student-layout hidden" aria-labelledby="student-page-title">
+        <!-- Parent email warning banner — shown by register.js if parent_email is missing -->
+        <div id="parent-email-warning" style="display:none;background:rgba(178,122,51,0.1);border:1px solid rgba(178,122,51,0.3);border-radius:10px;padding:12px 16px;margin-bottom:16px;align-items:center;gap:12px;flex-wrap:wrap;">
+          <svg style="flex-shrink:0;" class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="#b27a33" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span style="flex:1;font-size:0.85rem;color:var(--text-secondary);">Notice: No parent email registered. <strong>Weekly wellbeing digests and attendance alerts require parent contact.</strong></span>
+          <a href="#student-profile" class="btn btn-secondary btn-sm" style="font-size:0.8rem;padding:4px 10px;">Update in Profile →</a>
+        </div>
+
+        <!-- Summative Test Announcement Banner (Requirement 2: onSnapshot notification alert) -->
+        <div id="student-summative-alert" style="display:none;background:linear-gradient(135deg, rgba(30,58,138,0.08), rgba(37,99,235,0.06));border:1px solid rgba(37,99,235,0.35);border-radius:10px;padding:14px 18px;margin-bottom:18px;align-items:center;gap:14px;flex-wrap:wrap;">
+          <div style="width:36px;height:36px;border-radius:8px;background:#dbeafe;color:#1d4ed8;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">📝</div>
+          <div style="flex:1;min-width:220px;">
+            <strong id="summative-alert-title" style="color:var(--c-primary);font-size:0.95rem;display:block;">Upcoming Summative Test Scheduled</strong>
+            <span id="summative-alert-message" style="font-size:0.85rem;color:var(--text-secondary);">Your teacher has posted an assessment schedule.</span>
+          </div>
+          <a href="#student-grades" class="btn btn-primary btn-sm" style="font-size:0.8rem;padding:6px 14px;white-space:nowrap;">View Scores &amp; Schedule →</a>
+        </div>
+
+        <!-- TAB 1: Emotion Check-in & Self-Reflection -->
+        <div id="tab-student-emotion" class="student-tab-panel">
+          <section id="student-emotion" style="margin-bottom:20px;">
+            <div id="emotional-checkin-view">
+              <div class="state-panel state-loading"><strong>Loading emotional check-in…</strong></div>
+            </div>
+          </section>
+
+          <section id="student-reflection" class="card" style="margin-bottom:20px;">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Self-Reflection Timeline</h2>
+                <p class="card-subtitle">Your personal 14-day emotional journey grounded in constructivist self-awareness.</p>
+              </div>
+              <span class="priority-pill resolved">Constructivist Growth</span>
+            </div>
+            <div id="self-reflection-timeline-view" class="card-body">
+              <div class="state-panel state-loading"><strong>Loading reflection timeline…</strong></div>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB 2: Talk to Someone (Private Channel) -->
+        <div id="tab-student-concern" class="student-tab-panel hidden">
+          <section id="student-concern" class="card" style="margin-bottom:28px;border-color:rgba(45,95,124,0.22);background:linear-gradient(180deg, var(--bg-card) 0%, rgba(234,241,245,0.45) 100%);">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Talk to Someone</h2>
+                <p class="card-subtitle">Share confidentially. Only school counselors and administrators can read your message — never your teachers or peers.</p>
+              </div>
+              <span class="status-badge status-present" style="display:inline-flex;align-items:center;gap:5px;">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Private &amp; Confidential
+              </span>
+            </div>
+            <div id="concern-channel-view">
+              <div class="state-panel state-loading"><strong>Loading…</strong></div>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB 3: Student ID & QR -->
+        <div id="tab-student-id" class="student-tab-panel hidden">
+          <div class="page-header" id="student-id"><div><h1 id="student-page-title" class="page-title">Student ID</h1><p class="page-subtitle">Show this QR code to your teacher during class arrival.</p></div><div class="page-actions"><button id="btn-dl-qr" class="btn btn-secondary"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Download QR</button><button id="btn-dl-id" class="btn btn-primary"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Download ID</button></div></div>
+          <div id="id-card-3d-wrap" class="id-card-shell">
+            <div id="id-card-inner" class="student-id-card" style="width:320px!important;min-width:320px!important;max-width:320px!important;min-height:535px!important;box-sizing:border-box;background:#ffffff;border-radius:20px;overflow:hidden;border:1px solid #cbd5e1;display:flex;flex-direction:column;align-items:center;padding:0;box-shadow:0 10px 25px -5px rgba(0,0,0,0.08);">
+              
+              <!-- Header: ClassCare branding with pastel-colored banner background -->
+              <div class="id-card-top" style="width:100%;box-sizing:border-box;padding:12px 16px;background:linear-gradient(135deg, #e0e7ff 0%, #ede9fe 50%, #fce7f3 100%);border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div style="width:28px;height:28px;border-radius:8px;background:#4f46e5;color:#ffffff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;box-shadow:0 2px 4px rgba(79,70,229,0.3);" aria-hidden="true">C</div>
+                  <div style="display:flex;flex-direction:column;">
+                    <div class="id-school" style="font-size:15px;font-weight:800;color:#0f172a;line-height:1.2;" data-branding-name>ClassCare</div>
+                    <div class="id-school-meta" style="font-size:10px;font-weight:700;color:#4338ca;text-transform:uppercase;letter-spacing:0.04em;line-height:1.2;margin-top:1px;">Official Student ID</div>
+                  </div>
+                </div>
+                <div class="id-validity" style="text-align:right;display:flex;flex-direction:column;">
+                  <div class="id-validity-label" style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;line-height:1.2;">Valid Until</div>
+                  <div id="id-validity" class="id-validity-value" style="font-size:12px;font-weight:800;color:#1e293b;font-family:ui-monospace,monospace;line-height:1.3;margin-top:1px;">—</div>
+                </div>
+              </div>
+
+              <!-- Body: Centered profile picture, Student Name, Status, and Details -->
+              <div class="id-card-body" style="width:100%;display:flex;flex-direction:column;align-items:center;padding:0 16px;box-sizing:border-box;">
+                
+                <!-- Fixed, absolute dimensions profile picture container with rounded-full and shadow -->
+                <div id="id-avatar" class="id-photo" style="width:84px!important;height:84px!important;min-width:84px!important;min-height:84px!important;max-width:84px!important;max-height:84px!important;border-radius:9999px!important;border:3.5px solid #ffffff!important;box-shadow:0 4px 14px rgba(0,0,0,0.12)!important;overflow:hidden!important;background:#f1f5f9;margin:12px auto 4px!important;display:flex!important;align-items:center!important;justify-content:center!important;color:#4f46e5;font-weight:800;font-size:26px;box-sizing:border-box;">S</div>
+
+                <!-- Student Name (normal line-height, no overflow hidden, full visibility) -->
+                <h2 id="id-name" class="id-name" style="font-size:18px;font-weight:800;color:#0f172a;text-align:center;margin:4px 0 0;line-height:1.3;padding:0 8px;white-space:nowrap;overflow:visible;">Student</h2>
+                
+                <!-- Status Badge -->
+                <div id="id-status" class="id-status" style="margin:4px auto 0;text-align:center;display:flex;justify-content:center;"><span class="status-badge status-not-recorded">Not Enrolled</span></div>
+
+                <!-- Student Details Panel (Clear rows, no overlapping grid borders) -->
+                <div class="id-details" style="width:280px;margin:10px auto 0;padding:8px 12px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;box-sizing:border-box;">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+                    <div class="id-detail" style="display:flex;flex-direction:column;">
+                      <span class="id-detail-label" style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;line-height:1.2;">Student ID</span>
+                      <span id="id-student-id" class="tabular" style="font-size:12px;font-weight:800;color:#0f172a;font-family:ui-monospace,monospace;line-height:1.4;margin-top:2px;">—</span>
+                    </div>
+                    <div class="id-detail" style="display:flex;flex-direction:column;text-align:right;">
+                      <span class="id-detail-label" style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;line-height:1.2;">Section</span>
+                      <span id="id-section" style="font-size:12px;font-weight:800;color:#0f172a;line-height:1.4;margin-top:2px;">—</span>
+                    </div>
+                  </div>
+                  <div style="height:1px;background:#e2e8f0;margin:6px 0;"></div>
+                  <div class="id-detail" style="display:flex;flex-direction:column;">
+                    <span class="id-detail-label" style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;line-height:1.2;">Guardian / Contact</span>
+                    <span id="id-parent-contact" class="tabular" style="font-size:11px;font-weight:700;color:#0f172a;line-height:1.35;margin-top:2px;word-break:break-word;">—</span>
+                    <span id="id-parent-email" class="tabular" style="font-size:10px;font-weight:500;color:#64748b;line-height:1.3;margin-top:2px;word-break:break-all;">—</span>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Footer: Single Centered QR code in white rounded card + UID -->
+              <div class="id-card-footer" style="width:100%;padding:10px 16px 12px;display:flex;flex-direction:column;align-items:center;background:#ffffff;box-sizing:border-box;">
+                <div id="qr-wrap" class="qr-panel" style="width:168px;height:168px;padding:8px;background:#ffffff;border-radius:14px;border:1.5px solid #e2e8f0;box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;box-sizing:border-box;">
+                  <div id="qr-canvas" aria-label="Student QR code" style="width:152px;height:152px;display:flex;align-items:center;justify-content:center;background:#ffffff;overflow:hidden;"></div>
+                </div>
+                <div id="id-uid" class="id-school-meta tabular" style="font-size:9px;font-family:ui-monospace,monospace;color:#94a3b8;margin-top:6px;text-align:center;letter-spacing:0.02em;">uid: —</div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 4: Attendance History -->
+        <div id="tab-student-attendance" class="student-tab-panel hidden">
+          <section id="student-attendance" class="attendance-summary"><div class="attendance-summary-head"><h2>Attendance History</h2><span>Recent school days</span></div><div class="summary-row"><div class="summary-item"><div class="summary-label">Recorded</div><div id="stat-total" class="summary-value">—</div><div class="summary-help">attendance entries</div></div><div class="summary-item summary-present"><div class="summary-label">Present</div><div id="stat-present" class="summary-value">—</div><div id="stat-present-pct" class="summary-help">—</div></div><div class="summary-item summary-late"><div class="summary-label">Late</div><div id="stat-late" class="summary-value">—</div><div class="summary-help">arrivals</div></div><div class="summary-item summary-absent"><div class="summary-label">Absent</div><div id="stat-absent" class="summary-value">—</div><div class="summary-help">days</div></div></div><div id="attendance-strip" class="attendance-strip" aria-label="Attendance for the last 14 days"></div><div class="attendance-legend" aria-label="Attendance status legend"><span><i class="legend-dot present"></i><span id="legend-present">Present</span></span><span><i class="legend-dot late"></i><span id="legend-late">Late</span></span><span><i class="legend-dot absent"></i><span id="legend-absent">Absent</span></span><span><i class="legend-dot"></i>Not recorded</span></div></section>
+          <section class="card" id="student-attendance-table"><div class="card-header"><div><h2 class="card-title">Recent attendance</h2><p class="card-subtitle">Your latest attendance records.</p></div></div><div class="table-wrap"><table class="data"><thead><tr><th>Date</th><th>Time in</th><th>Time out</th><th>Status</th></tr></thead><tbody id="recent-tbody"><tr><td colspan="4"><div class="state-panel state-loading"><strong>Loading attendance</strong><span>We are checking your recent records.</span></div></td></tr></tbody></table></div></section>
+        </div>
+
+        <!-- TAB 5: Grades & Subjects -->
+        <div id="tab-student-grades" class="student-tab-panel hidden">
+          <section id="student-grades" class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Subjects &amp; Grades</h2>
+                <p class="card-subtitle">Your enrolled subjects and term grades, updated in real-time.</p>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span class="status-badge status-present" id="student-grades-count">0 Subjects</span>
+                <button id="btn-print-grades" class="btn btn-secondary btn-sm" type="button" style="display:inline-flex;align-items:center;gap:6px;">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                  Print Report Card
+                </button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="data">
+                <thead><tr><th>Subject</th><th>Grade &amp; Section</th><th>Teacher</th><th style="width:75px;text-align:center;">1st Term</th><th style="width:75px;text-align:center;">2nd Term</th><th style="width:75px;text-align:center;">3rd Term</th><th style="width:75px;text-align:center;">4th Term</th><th style="width:85px;text-align:center;">Final Grade</th><th style="width:115px;text-align:center;">Remarks</th></tr></thead>
+                <tbody id="student-grades-tbody"><tr><td colspan="9"><div class="state-panel state-loading"><strong>Loading subjects&hellip;</strong></div></td></tr></tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- Requirement 2: Confidential Summative Assessment Scores (Private onSnapshot) -->
+          <section id="student-summative-grades-card" class="card" style="margin-top:24px;">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">My Summative Assessment Scores</h2>
+                <p class="card-subtitle">Confidential individual test scores and passing evaluations, updated in real time.</p>
+              </div>
+              <span class="status-badge status-present" style="display:inline-flex;align-items:center;gap:4px;">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Strictly Confidential
+              </span>
+            </div>
+            <div class="table-wrap">
+              <table class="data">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Subject</th>
+                    <th>Assessment Title</th>
+                    <th style="text-align:center;width:90px;">My Score</th>
+                    <th style="text-align:center;width:90px;">Passing Min</th>
+                    <th style="text-align:center;width:90px;">Percentage</th>
+                    <th style="text-align:center;width:120px;">Evaluation</th>
+                  </tr>
+                </thead>
+                <tbody id="student-summative-tbody">
+                  <tr><td colspan="7"><div class="state-panel state-empty"><strong>No summative test records yet.</strong><span>Your individual scores will appear here when your teacher records assessments.</span></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB 6: Enrollment Pre-enlistment -->
+        <div id="tab-student-enrollment" class="student-tab-panel hidden">
+          <section id="student-enrollment" class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Enrollment</h2>
+                <p class="card-subtitle">Pre-enlistment form — available only during the Enrollment Period set by your Administrator.</p>
+              </div>
+              <span class="status-badge" id="enrollment-period-badge" style="min-width:80px;text-align:center;">Checking…</span>
+            </div>
+            <div id="enrollment-view" class="card-body">
+              <div class="state-panel state-loading"><strong>Loading enrollment status…</strong></div>
+            </div>
+            <div id="enrollment-requests" class="card-body" style="padding-top:0;"></div>
+            <div id="enrollment-form-wrap" class="card-body" style="padding-top:0;"></div>
+          </section>
+        </div>
+
+        <!-- TAB 7: Profile & Support -->
+        <div id="tab-student-profile" class="student-tab-panel hidden">
+          <section id="student-profile" class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">My Profile &amp; Contact Information</h2>
+                <p class="card-copy">Review your student record and manage parent or guardian contacts for attendance notifications.</p>
+              </div>
+            </div>
+            <div class="card-body">
+              <form id="form-student-profile" class="form-stack">
+                <div class="field-row cols-2">
+                  <div>
+                    <label class="field-label" for="profile-student-name">Student name</label>
+                    <input id="profile-student-name" class="field" readonly disabled style="opacity:0.85;cursor:not-allowed;" />
+                  </div>
+                  <div>
+                    <label class="field-label" for="profile-student-id">Student ID</label>
+                    <input id="profile-student-id" class="field" readonly disabled style="opacity:0.85;cursor:not-allowed;" />
+                  </div>
+                </div>
+                <div class="field-row cols-2">
+                  <div>
+                    <label class="field-label" for="profile-student-grade">Grade level</label>
+                    <input id="profile-student-grade" class="field" readonly disabled style="opacity:0.85;cursor:not-allowed;" />
+                  </div>
+                  <div>
+                    <label class="field-label" for="profile-student-section">Enrolled section</label>
+                    <input id="profile-student-section" class="field" readonly disabled style="opacity:0.85;cursor:not-allowed;" />
+                  </div>
+                </div>
+                <div class="field-row cols-1">
+                  <div>
+                    <label class="field-label" for="profile-student-username">Username / Account</label>
+                    <input id="profile-student-username" class="field" readonly disabled style="opacity:0.85;cursor:not-allowed;" />
+                  </div>
+                </div>
+                <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border);">
+                  <p style="font-size:0.85rem;font-weight:600;margin:0 0 0.5rem 0;color:var(--text-primary);">Parent / Guardian Alert Contacts (Editable)</p>
+                  <div class="field-row cols-3">
+                    <div>
+                      <label class="field-label" for="profile-parent-name">Parent / Guardian name</label>
+                      <input id="profile-parent-name" name="parent_name" type="text" class="field" placeholder="e.g. Maria Dela Cruz" maxlength="60" />
+                      <span class="field-help">Full name of parent or legal guardian.</span>
+                    </div>
+                    <div>
+                      <label class="field-label" for="profile-parent-contact">Parent phone / Telegram</label>
+                      <input id="profile-parent-contact" name="parent_contact" class="field" placeholder="09123456789 or @username" maxlength="40" />
+                      <span class="field-help">Mobile number or Telegram handle.</span>
+                    </div>
+                    <div>
+                      <label class="field-label" for="profile-parent-email">Parent email</label>
+                      <input id="profile-parent-email" name="parent_email" type="email" class="field" placeholder="parent@example.com" maxlength="120" />
+                      <span class="field-help">Used for automated daily notifications.</span>
+                    </div>
+                  </div>
+                </div>
+                <div style="display:flex;justify-content:flex-end;margin-top:0.5rem;">
+                  <button type="submit" id="btn-save-profile" class="btn btn-primary">Save contact details</button>
+                </div>
+              </form>
+            </div>
+          </section>
+          <section id="student-help" class="support-link-row"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.7 8.7 0 0 1-3.7-.8L4 20l1.8-3.6A7.1 7.1 0 0 1 4 11.5 7.5 7.5 0 0 1 12 4a7.5 7.5 0 0 1 8 7.5Z"/></svg><button id="btn-helpdesk" type="button" class="support-action">Need an attendance correction or help with your ID?</button></section>
+        </div>
+      </section></main>
+      <footer class="app-bottom-banner">CLASSCARE &bull; LIVE DATABASE CONNECTED</footer>
+    </div>
+  </div>
+
+  <div id="photo-camera-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="photo-camera-title"><div class="modal-backdrop" data-close-camera></div><div class="modal-card"><div class="modal-header"><div><h2 id="photo-camera-title" class="modal-title">Take student photo</h2><p class="modal-copy">Keep your face inside the frame.</p></div><button type="button" id="btn-close-camera" class="modal-close-btn" aria-label="Close camera"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><video id="photo-camera-video" class="camera-preview" autoplay playsinline></video><p id="photo-camera-status" class="field-help">Allow camera access to continue.</p><div class="form-actions"><button type="button" id="btn-cancel-camera" class="btn btn-secondary">Cancel</button><button type="button" id="btn-capture-photo" class="btn btn-primary">Capture photo</button></div></div></div>
+  <!-- Official DepEd Student Report Card / Grade Slip Modal -->
+  <div id="print-grade-slip-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="grade-slip-title">
+    <div class="modal-backdrop" data-close-grade-slip></div>
+    <div class="modal-card grade-slip-modal-card" style="max-width:760px;width:95vw;max-height:90vh;overflow-y:auto;">
+      <div class="modal-header">
+        <div>
+          <h2 id="grade-slip-title" class="modal-title">Student Progress Report Card</h2>
+          <p class="modal-copy">Official DepEd Form 137 Grading Sheet</p>
+        </div>
+        <button type="button" class="modal-close-btn" data-close-grade-slip aria-label="Close modal">×</button>
+      </div>
+      <div id="grade-slip-printable" class="grade-slip-sheet" style="padding:1rem 0;">
+        <!-- Populated dynamically by student/grades.js -->
+      </div>
+      <div class="form-actions" style="margin-top:1rem;display:flex;justify-content:flex-end;gap:10px;">
+        <button type="button" class="btn btn-secondary" data-close-grade-slip>Close</button>
+        <button type="button" id="btn-do-print-slip" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:6px;">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+          Print / Save as PDF
+        </button>
+      </div>
+    </div>
+  </div>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const tabMap = {
+        "#student-emotion": "tab-student-emotion",
+        "#student-reflection": "tab-student-emotion",
+        "#student-id": "tab-student-id",
+        "#student-attendance": "tab-student-attendance",
+        "#student-grades": "tab-student-grades",
+        "#student-concern": "tab-student-concern",
+        "#student-enrollment": "tab-student-enrollment",
+        "#student-profile": "tab-student-profile",
+        "#student-help": "tab-student-profile"
+      };
+
+      function switchStudentTab(targetHash) {
+        const rawHash = (targetHash || window.location.hash || "#student-emotion").split("?")[0];
+        const targetPanelId = tabMap[rawHash] || "tab-student-emotion";
+
+        document.querySelectorAll(".student-tab-panel").forEach(panel => {
+          if (panel.id === targetPanelId) {
+            panel.classList.remove("hidden");
+          } else {
+            panel.classList.add("hidden");
+          }
+        });
+
+        document.querySelectorAll(".classcare-nav-item").forEach(item => {
+          const itemHref = (item.getAttribute("href") || "").split("?")[0];
+          const isActive = (itemHref === rawHash) || (tabMap[itemHref] === targetPanelId);
+          item.classList.toggle("active", isActive);
+        });
+
+        // Also update legacy sidebar nav-links if present
+        document.querySelectorAll(".app-sidebar .nav-link").forEach(item => {
+          const itemHref = (item.getAttribute("href") || "").split("?")[0];
+          item.classList.toggle("active", itemHref === rawHash || tabMap[itemHref] === targetPanelId);
+        });
+      }
+
+      window.addEventListener("hashchange", () => switchStudentTab(window.location.hash));
+      document.querySelectorAll(".classcare-nav-item, .app-sidebar .nav-link").forEach(link => {
+        link.addEventListener("click", (e) => {
+          const href = link.getAttribute("href");
+          if (href && href.startsWith("#")) {
+            switchStudentTab(href);
+          }
+        });
+      });
+
+      // Initial tab display
+      switchStudentTab(window.location.hash || "#student-emotion");
+    });
+  </script>
+</body>
+</html>

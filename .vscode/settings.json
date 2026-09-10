@@ -1,0 +1,5 @@
+{
+    "telemetry.editStats.details.enabled": true,
+    "telemetry.editStats.showDecorations": true,
+    "telemetry.editStats.showStatusBar": true
+}
