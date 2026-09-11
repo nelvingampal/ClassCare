@@ -198,7 +198,7 @@
   }
   function renderQuestion() {
     const index = answers.length, question = H.QUESTIONS[index];
-    if (!question) return autoSubmit();
+    if (!question) { $('review-answers').replaceChildren(); H.QUESTIONS.forEach((q,i) => { const li=document.createElement('li'); li.textContent=q.text+' '+q.options[answers[i]]; $('review-answers').append(li); }); return review(); }
     $('question-title').textContent = question.text; $('question-step').textContent = `Question ${index + 1} of 5`;
     $('question-options').replaceChildren();
     question.options.forEach((option, choice) => {
@@ -242,7 +242,7 @@
         successEl.hidden = false;
         if ($('assessment-questions-area')) $('assessment-questions-area').hidden = true;
       }
-      status('Attendance & Check-in Complete! 🎉');
+      status('Check-in saved. Thank you.');
       await new Promise(r => setTimeout(r, 2000));
       if (successEl) successEl.hidden = true;
       if ($('assessment-questions-area')) $('assessment-questions-area').hidden = false;
@@ -316,7 +316,7 @@
       setTimeout(() => location.replace("../index.html"), 700);
       return;
     }
-    user = next && !next.__profileError && ['teacher', 'admin'].includes(next.role) ? next : null;
+    user = next && !next.__profileError && ['teacher', 'admin'].includes(next.role) && !next.disabled && (next.role === 'admin' || next.pending_approval === false) ? next : null;
     $('kiosk-content').hidden = !user; $('auth-required').hidden = !!user;
     if (!user) { busy = false; student = null; return; }
     settingsReady = false;

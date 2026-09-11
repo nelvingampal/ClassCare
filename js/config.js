@@ -50,7 +50,7 @@ window.CLASSCARE_CONFIG = {
      ║     to students, they run  /register 2024-1001  (their ID).║
      ╚══════════════════════════════════════════════════════════════╝ */
   telegram: {
-    botToken: "8642164323:AAFuuyd8ysYGrFIgo8aCmWCTSpkZ6wQDqCM"
+    botToken: ""
   },
 
   /* ╔══════════════════════════════════════════════════════════════╗
@@ -84,7 +84,7 @@ window.CLASSCARE_CONFIG = {
      ╚══════════════════════════════════════════════════════════════╝ */
   ai: {
     // Paste a free Gemini API key to enable free-form AI answers.
-    geminiApiKey: "AQ.Ab8RN6ILA32buOW1ONDmwS3EaStidk2avOCduw5k486f4uI4nQ",
+    geminiApiKey: "",
 
     // Which Gemini model to use (free tier).
     geminiModel: "gemini-2.0-flash",

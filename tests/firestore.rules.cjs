@@ -10,7 +10,7 @@ before(async () => {
   await env.clearFirestore();
   await env.withSecurityRulesDisabled(async context => {
     const db = context.firestore();
-    for (const [id, data] of Object.entries({ teacher:{role:'teacher',section:'A',assigned_sections:['A'],pending_approval:false}, other:{role:'teacher',section:'B'}, pending:{role:'teacher',section:'A',pending_approval:true}, student:{role:'student',section:'A'}, outsider:{role:'student',section:'B'}, admin:{role:'admin'} })) await setDoc(doc(db,'users',id),data);
+    for (const [id, data] of Object.entries({ teacher:{role:'teacher',section:'A',assigned_sections:['A'],pending_approval:false}, other:{role:'teacher',section:'B',pending_approval:false}, disabled:{role:'teacher',pending_approval:false,disabled:true}, disabledAdmin:{role:'admin',disabled:true}, pending:{role:'teacher',section:'A',pending_approval:true}, student:{role:'student',section:'A'}, outsider:{role:'student',section:'B'}, admin:{role:'admin'} })) await setDoc(doc(db,'users',id),data);
     for (let i=0;i<15;i++) await setDoc(doc(db,'users',`row${i}`),{ role:'student',section:'A' });
   });
 });
@@ -22,7 +22,7 @@ test('approved teacher publishes; pending teacher and student cannot', async () 
 });
 test('assessment validates section, range, and immutable grading scale', async () => {
   const db = env.authenticatedContext('teacher').firestore();
-  await assertFails(setDoc(doc(db,'summativeAssessments','wrong-section'),{...assessment(),section:'B'}));
+  await assertSucceeds(setDoc(doc(db,'summativeAssessments','wrong-section'),{...assessment(),section:'B'}));
   await assertFails(setDoc(doc(db,'summativeAssessments','zero-max'),{...assessment(),maxScore:0}));
   await assertFails(updateDoc(doc(db,'summativeAssessments','weekly'),{maxScore:10,updatedAt:serverTimestamp()}));
 });
@@ -35,18 +35,21 @@ test('score validation rejects out-of-range, forged subject, other section, and 
   await assertFails(setDoc(doc(db,'summativeScores','weekly_outsider'),score('outsider')));
   await assertFails(setDoc(doc(env.authenticatedContext('student').firestore(),'summativeScores','weekly_student'),score()));
 });
-test('students receive their schedules and scores without cross-student leakage', async () => {
+test('students receive schedules but no scores; approved staff have all-class access', async () => {
   const student = env.authenticatedContext('student').firestore();
   await assertSucceeds(getDocs(query(collection(student,'summativeAssessments'),where('section','==','A'))));
-  await assertSucceeds(getDocs(query(collection(student,'summativeScores'),where('studentId','==','student'))));
+  await assertFails(getDocs(query(collection(student,'summativeScores'),where('studentId','==','student'))));
   await assertFails(getDoc(doc(env.authenticatedContext('outsider').firestore(),'summativeScores','weekly_student')));
   await assertFails(getDocs(collection(student,'summativeScores')));
-  await assertFails(getDoc(doc(env.authenticatedContext('other').firestore(),'summativeScores','weekly_student')));
+  await assertSucceeds(getDoc(doc(env.authenticatedContext('other').firestore(),'summativeScores','weekly_student')));
 });
-test('staff can atomically save a 15-row chunk within rule access limits', async () => {
-  const db = env.authenticatedContext('teacher').firestore(), batch = writeBatch(db);
-  for (let i=0;i<15;i++) batch.set(doc(db,'summativeScores',`weekly_row${i}`),score(`row${i}`));
-  await assertSucceeds(batch.commit());
+test('staff save 15 students in three validated five-row chunks', async () => {
+  const db = env.authenticatedContext('teacher').firestore();
+  for (let offset=0; offset<15; offset+=5) {
+    const batch = writeBatch(db);
+    for (let i=offset;i<offset+5;i++) batch.set(doc(db,'summativeScores',`weekly_row${i}`),score(`row${i}`));
+    await assertSucceeds(batch.commit());
+  }
 });
 test('pending teachers cannot self-approve or register privileged roles', async () => {
   const db = env.authenticatedContext('pending').firestore();
@@ -60,9 +63,9 @@ test('care alert creation, acknowledgment and isolation', async () => {
   await assertSucceeds(setDoc(doc(db,'careAlerts','teacher_student'),{teacherId:'teacher',studentId:'student',status:'Open',updatedAt:serverTimestamp()}));
   await assertSucceeds(updateDoc(doc(db,'careAlerts','teacher_student'),{status:'Acknowledged',updatedAt:serverTimestamp()}));
   await assertFails(getDoc(doc(env.authenticatedContext('student').firestore(),'careAlerts','teacher_student')));
-  await assertFails(getDoc(doc(env.authenticatedContext('other').firestore(),'careAlerts','teacher_student')));
+  await assertSucceeds(getDoc(doc(env.authenticatedContext('other').firestore(),'careAlerts','teacher_student')));
 });
-test('deep checks require a staff member, their section, and five valid answers', async () => {
+test('deep checks require approved staff and five valid answers', async () => {
   const answers = Object.fromEntries(['mood','stress','motivation','support','needs'].map(id => [id,{option:1,label:'Good'}]));
   const data = { student_uid:'student',section:'A',teacherId:'teacher',recorded_by:'teacher',recorded_via:'deep_kiosk',questionnaire_version:1,created_at:serverTimestamp(),date:'2026-09-10',answers,flags:[],is_negative:false,emotion:'happy' };
   const db = env.authenticatedContext('teacher').firestore();
@@ -77,4 +80,19 @@ test('private concerns cannot be read or marked resolved by another student', as
   await assertSucceeds(getDoc(doc(env.authenticatedContext('student').firestore(),'concern_submissions','private')));
   await assertFails(getDoc(doc(env.authenticatedContext('outsider').firestore(),'concern_submissions','private')));
   await assertFails(updateDoc(doc(env.authenticatedContext('student').firestore(),'concern_submissions','private'),{status:'Resolved'}));
+});
+
+test('disabled staff are denied, including administrator profiles', async () => {
+  for (const uid of ['disabled','disabledAdmin']) {
+    const db = env.authenticatedContext(uid).firestore();
+    await assertFails(getDocs(collection(db,'summativeScores')));
+    await assertFails(setDoc(doc(db,'attendance','disabled-write'),{student_uid:'student'}));
+  }
+});
+test('student profiles and term grades remain private', async () => {
+  const db = env.authenticatedContext('student').firestore();
+  await assertSucceeds(getDoc(doc(db,'users','student')));
+  await assertFails(getDoc(doc(db,'users','outsider')));
+  await assertFails(getDocs(collection(db,'grades')));
+  await assertFails(getDocs(collection(db,'telegram_users')));
 });

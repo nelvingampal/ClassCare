@@ -12,31 +12,16 @@
     root = node('section', null, 'cc-card'); root.id = 'holistic-live'; root.append(node('h2', title)); host.prepend(root); return root;
   }
   function studentView(user) {
-    const card = mount('Summative assessments'); if (!card) return;
+    const card = mount('Assessment schedule'); if (!card) return;
     const state = node('p', 'Connecting…', 'cc-live'), list = node('div'); card.append(state, list);
-    let assessments = [], scores = [], readiness = new Map();
-    function render() {
-      list.replaceChildren(); state.textContent = [...readiness.values()].every(Boolean) && readiness.size === 2 ? 'Live · confirmed by Firestore' : 'Connecting or showing cached / pending records';
-      const table = node('table', null, 'cc-grid'), head = table.createTHead().insertRow();
-      ['Date', 'Assessment', 'Subject', 'Score'].forEach(label => head.append(node('th', label)));
-      const body = table.createTBody(), scoreMap = new Map(scores.map(s => [s.assessmentId, s]));
-      const all = new Map(assessments.map(a => [a.id, a]));
-      // Preserve a student's historical scores after they move sections.
-      scores.forEach(s => { if (!all.has(s.assessmentId)) all.set(s.assessmentId, { id: s.assessmentId, scheduledDate: s.assessmentDate, subject: s.subject, title: 'Previous section assessment' }); });
-      [...all.values()].sort((a, b) => b.scheduledDate.localeCompare(a.scheduledDate)).forEach(a => {
-        const score = scoreMap.get(a.id), row = body.insertRow();
-        [a.scheduledDate, a.title, a.subject, score ? `${score.score} / ${score.maxScore} (${H.percent(score.score, score.maxScore)?.toFixed(1) ?? '—'}%)` : 'Not graded'].forEach(value => row.insertCell().textContent = value);
+    if (!user.section) { state.textContent = 'Your section has not been assigned yet.'; return; }
+    stops.push(db().collection('summativeAssessments').where('section','==',user.section).onSnapshot({includeMetadataChanges:true}, snap => {
+      state.textContent = snap.metadata.fromCache ? 'Cached schedule' : 'Assessment schedule'; list.replaceChildren();
+      snap.docs.map(d => d.data()).sort((a,b)=>b.scheduledDate.localeCompare(a.scheduledDate)).forEach(a => {
+        list.append(node('p', a.scheduledDate + ' · ' + a.subject + ' · ' + a.title));
       });
-      if (!all.size) list.append(node('p', user.section ? 'No summative assessments scheduled yet.' : 'Your section has not been assigned yet.'));
-      else { const wrap = node('div', null, 'cc-table-wrap'); wrap.append(table); list.append(wrap); }
-    }
-    const listen = (query, name, next) => stops.push(query.onSnapshot({ includeMetadataChanges: true }, snapshot => {
-      readiness.set(name, !snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites); next(snapshot.docs.map(d => ({ ...d.data(), id: d.id }))); render();
-    }, error => { readiness.set(name, false); state.textContent = `${name} unavailable: ${error.message}`; list.replaceChildren(); }));
-    readiness.set('Schedules', false); readiness.set('Scores', false);
-    if (user.section) listen(db().collection('summativeAssessments').where('section', '==', user.section), 'Schedules', rows => { assessments = rows; });
-    else readiness.set('Schedules', true);
-    listen(db().collection('summativeScores').where('studentId', '==', user.uid), 'Scores', rows => { scores = rows; });
+      if (snap.empty) list.append(node('p','No assessments scheduled yet.'));
+    }, () => { state.textContent = 'Schedule unavailable. Please reconnect and try again.'; }));
   }
   function staffView(user) {
     const card = mount('Holistic Care Alerts'); if (!card) return;
@@ -121,7 +106,7 @@
     timer = setInterval(() => { revision++; void evaluate(); }, 60000); // Expire old evidence even if no document changes.
   }
   const stopAuth = ClassCare.onCurrentUser(user => {
-    cleanup(); if (!user || user.__profileError) return;
+    cleanup(); if (!user || user.__profileError || user.disabled || (user.role === 'teacher' && user.pending_approval !== false)) return;
     if (user.role === 'student') studentView(user);
     else if (['teacher', 'admin'].includes(user.role)) staffView(user);
   });

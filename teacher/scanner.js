@@ -253,6 +253,8 @@
   }
 
   function showGuest(message = "") {
+    if ($('#auth-required')) $('#auth-required').hidden = false;
+    if ($('#kiosk-content')) $('#kiosk-content').hidden = true;
     cleanupScanner(); State.generation++; State.students.clear(); State.attendance.clear(); State.teacher = null;
     publicView?.classList.remove("hidden"); appShell?.classList.add("hidden");
     viewGuest?.classList.remove("hidden"); viewDashboard?.classList.add("hidden"); userChip?.classList.add("hidden");
@@ -260,6 +262,8 @@
     if (message) Toast.error(message);
   }
   function showDashboard(user) {
+    if ($('#auth-required')) $('#auth-required').hidden = true;
+    if ($('#kiosk-content')) $('#kiosk-content').hidden = false;
     publicView?.classList.add("hidden"); appShell?.classList.remove("hidden");
     viewGuest?.classList.add("hidden"); viewDashboard?.classList.remove("hidden"); userChip?.classList.remove("hidden");
     ClassCareUI?.setAuthState(true);
@@ -344,11 +348,8 @@
     if (!user) return showGuest();
     if (user.__profileError) return showGuest("Your ClassCare profile could not be read. Check your connection or ask IT administration to verify access.");
     if (!["teacher", "admin"].includes(user.role)) { Toast.warn("This workspace is for teachers and IT administration."); setTimeout(() => location.replace("../index.html"), 700); return; }
-    if (user.role === "teacher" && user.pending_approval) {
-      user.pending_approval = false;
-      try {
-        ClassCare.DB?.users?.doc(user.uid)?.set({ pending_approval: false }, { merge: true })?.catch(() => {});
-      } catch (_) {}
+    if (user.disabled || (user.role === "teacher" && user.pending_approval !== false)) {
+      return showGuest("Your account is awaiting administrator approval or has been disabled.");
     }
     showDashboard(user);
   });
@@ -3074,61 +3075,38 @@
     _isKiosk3StepSaving = true;
     const today = Utils.todayIso();
     const payload = {
-      student_uid: student.uid,
-      student_name: `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Student',
-      student_id: student.student_id || '',
-      section: student.section || State.section || '',
-      date: today,
-      mood: answers.mood || 'Okay',
-      stress: answers.stress || 'Not stressed',
-      need: answers.need || 'Encouragement',
-      mood_key: answers.mood_key || 'okay',
-      stress_key: answers.stress_key || 'not_stressed',
-      need_key: answers.need_key || 'someone_to_talk_to',
-      is_negative: !!(answers.mood_negative || answers.stress_negative || answers.need_negative),
-      recorded_at: firebase.firestore.FieldValue.serverTimestamp(),
-      recorded_by: State.teacher?.uid || ''
+      student_uid:student.uid, student_name:`${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Student',
+      student_id:student.student_id || '',section:student.section || State.section || '',date:today,
+      mood:answers.mood || null, stress:answers.stress || null, need:answers.need || null,
+      mood_key:answers.mood_key || null,stress_key:answers.stress_key || null,need_key:answers.need_key || null,
+      is_negative:!!(answers.mood_negative || answers.stress_negative || answers.need_negative),
+      recorded_via:'attendance_3step',recorded_at:firebase.firestore.FieldValue.serverTimestamp(),recorded_by:State.teacher?.uid || ''
     };
-
     try {
-      const attDocId = ClassCare.DB.attendanceDocId(student.uid, today);
-      await ClassCare.DB.attendance.doc(attDocId).set({
-        mood: answers.mood || 'Okay',
-        stress: answers.stress || 'Not stressed',
-        need: answers.need || 'Encouragement',
-        emotion_checkin_3step: payload
-      }, { merge: true });
-      await ClassCare.DB.emotional_checkins.add(payload);
-    } catch (err) {
-      console.warn("[kiosk] failed saving 3-step checkin:", err);
-    } finally {
-      _isKiosk3StepSaving = false;
-    }
-
-    if (answers.need_key === "someone_to_talk_to") {
-      try {
-        await ClassCare.DB.talkToSomeone.add({
-          student_uid: student.uid,
-          student_name: `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Student',
-          student_id: student.student_id || '',
-          section: student.section || State.section || '',
-          date: today,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-          submitted_at: firebase.firestore.FieldValue.serverTimestamp(),
-          concern_type: "Emotional / Someone to talk to",
-          concern_type_label: "Someone to talk to (Identified via Attendance Kiosk)",
-          status: "Not Solved",
-          message: "Student indicated they need someone to talk to during morning arrival check-in.",
-          source: "attendance_kiosk",
-          teacher_uid: State.teacher?.uid || '',
-          is_concern: true
-        });
-        SoundFeedback.play("intervention");
-        Toast.warn(`Care Alert: ${student.first_name || 'Student'} requested someone to talk to.`);
-      } catch (e) {
-        console.warn("[talkToSomeone] alert error:", e);
+      if (!navigator.onLine) throw new Error('Reconnect to save your answers.');
+      const batch=ClassCare.getFirebase().db.batch();
+      const id=ClassCare.DB.attendanceDocId(student.uid,today);
+      batch.set(ClassCare.DB.attendance.doc(id),{mood:payload.mood,stress:payload.stress,need:payload.need,is_negative:payload.is_negative,checkin_skipped:false,emotion_checkin_3step:payload},{merge:true});
+      batch.set(ClassCare.DB.emotional_checkins.doc(id+'_3step'),payload,{merge:true});
+      if(answers.need_key==='someone_to_talk_to') {
+        batch.set(ClassCare.DB.talkToSomeone.doc(id+'_3step'),{
+          student_uid:student.uid,student_name:payload.student_name,student_id:payload.student_id,section:payload.section,date:today,
+          submitted_at:firebase.firestore.FieldValue.serverTimestamp(),status:'Not Solved',
+          concern_type:'Emotional / Someone to talk to',message:'Student requested someone to talk to during the optional check-in.',
+          source:'attendance_kiosk',teacher_uid:State.teacher?.uid || '',is_concern:true
+        },{merge:true});
       }
-    }
+      await batch.commit();
+    } catch(error) {
+      Toast.error('Check-in not saved: '+error.message);
+      const grid=$('#kiosk-choices-grid');
+      if(grid) {
+        grid.replaceChildren();
+        const retry=document.createElement('button');retry.type='button';retry.className='btn btn-primary';retry.textContent='Retry saving these answers';
+        retry.onclick=()=>finish3StepEmotionalCheck(student,answers,record);grid.append(retry);
+      }
+      return;
+    } finally { _isKiosk3StepSaving=false; }
 
     // Real-time broadcast sync across tabs
     try {
@@ -3305,44 +3283,7 @@
   }
 
   async function verifyStudentBelongsToTeacher(student, teacher) {
-    if (!teacher || normalizeRole(teacher.role) === "admin") return true;
-    if (!student) return false;
-
-    // 1. If teacher currently selected a section in the dropdown, check against that:
-    if (State.section && student.section) {
-      if (sectionMatchesPrefix(State.section, student.section) || State.section.toLowerCase() === student.section.toLowerCase()) {
-        return true;
-      }
-    }
-
-    // 2. Check if student's section matches any of teacher's assigned sections
-    const teacherSections = getTeacherAssignedSections(teacher);
-    if (teacherSections.length === 0) {
-      return true;
-    }
-    if (student.section) {
-      const sectionMatch = teacherSections.some(sec => sectionMatchesPrefix(sec, student.section));
-      if (sectionMatch) return true;
-    }
-
-    // 3. Check if student is in State.students (already cached or loaded via section/enrollment listener)
-    if (State.students.has(student.uid)) return true;
-
-    // 4. Query Firestore enrollments collection for subject enrollment
-    try {
-      if (ClassCare?.DB?.enrollments && teacher.uid && student.uid) {
-        const enrSnap = await ClassCare.DB.enrollments
-          .where("teacher_uid", "==", teacher.uid)
-          .where("student_uid", "==", student.uid)
-          .limit(1)
-          .get();
-        if (!enrSnap.empty) return true;
-      }
-    } catch (err) {
-      console.warn("[scanner] verify enrollment check failed:", err);
-    }
-
-    return false;
+    return ClassCareKioskData.canScan(teacher, student);
   }
 
   async function handleDecodedText(raw) {
@@ -3360,60 +3301,18 @@
 
     const overlay = $("#emotion-overlay");
     if (overlay) {
-      const today = Utils.todayIso();
-      const timeIn = Utils.nowHhMm();
-      const evaluation = Utils.computeHierarchicalAttendance(timeIn, State.settings, getActiveTeacherAssignment(), State.attendance.get(student.uid));
-      const existing = State.attendance.get(student.uid);
-
-      if (existing?.time_in) {
-        if (evaluation.action === "time_out" && !existing.time_out) {
-          try {
-            const attDocId = ClassCare.DB.attendanceDocId(student.uid, today);
-            await ClassCare.DB.attendance.doc(attDocId).update({
-              time_out: timeIn,
-              time_out_scanned_by: State.teacher?.uid || '',
-              time_out_scanned_at: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            existing.time_out = timeIn;
-            State.attendance.set(student.uid, existing);
-          } catch (_) {}
-          showResult(student, "Time Out", timeIn, 0, "saved", existing);
-          Toast.success("Time out recorded.");
-          SoundFeedback.play("success");
-          setTimeout(() => resetAndRemountScanner(), 2500);
-          return;
-        }
-        showResult(student, existing.status || "Present", existing.time_in, existing.minutes_late || 0, "duplicate", existing);
-        Toast.info("Attendance already recorded today.");
-        SoundFeedback.play("warning");
-        setTimeout(() => resetAndRemountScanner(), 2500);
-        return;
-      }
-
-      const rec = {
-        student_uid: student.uid,
-        student_id: student.student_id || '',
-        student_name: `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Student',
-        photo_data: student.photo_data || '',
-        section: student.section || State.section || '',
-        date: today,
-        time_in: timeIn,
-        status: evaluation.status,
-        minutes_late: evaluation.minutes_late || 0,
-        scanned_by: State.teacher?.uid || '',
-        recorded_via: 'attendance_kiosk',
-        scanned_at: firebase.firestore.FieldValue.serverTimestamp()
-      };
       try {
-        const attDocId = ClassCare.DB.attendanceDocId(student.uid, today);
-        await ClassCare.DB.attendance.doc(attDocId).set(rec, { merge: true });
-        State.attendance.set(student.uid, rec);
-      } catch (err) {
-        console.warn("[scanner] error saving base attendance:", err);
+        const result = await ClassCareKioskData.saveAttendance(student,State.teacher,null,State.settings,getActiveTeacherAssignment());
+        const rec = result.record;
+        State.attendance.set(student.uid,rec);
+        showResult(student,result.kind === 'time_out' ? 'Time Out' : rec.status,rec.time_in,rec.minutes_late || 0,result.kind === 'duplicate' ? 'duplicate' : 'saved',rec);
+        if (result.kind === 'saved') await startWellbeingSurvey(student,rec);
+        else { Toast.info(result.kind === 'time_out' ? 'Time out recorded.' : 'Attendance already recorded today.'); setTimeout(() => resetAndRemountScanner(),2500); }
+      } catch (error) {
+        showResultError('Attendance not saved',error.message + ' Retry the scan.');
+        Toast.error('Attendance not saved. Reconnect and retry.');
+        await resumeQRScanner();
       }
-      showResult(student, rec.status, rec.time_in, rec.minutes_late, "saved", rec);
-      SoundFeedback.play("success");
-      await startWellbeingSurvey(student, rec);
     } else {
       State.wellbeing.active = true;
       try {
@@ -3423,7 +3322,7 @@
           State.attendance.set(student.uid, record);
           renderAttendanceTable(); renderStats(); updateChooser();
           showResult(student, record.status, record.time_in, record.minutes_late || 0, result.kind === 'duplicate' ? 'duplicate' : 'saved', record);
-          Toast.success(result.kind === 'duplicate' ? 'Attendance already recorded.' : result.kind === 'time_out' ? 'Time out saved.' : 'Attendance and mood saved.');
+          Toast.success(result.kind === 'duplicate' ? 'Attendance already recorded.' : result.kind === 'time_out' ? 'Time out saved.' : record.checkin_skipped ? 'Attendance saved; check-in skipped.' : 'Attendance and mood saved.');
           SoundFeedback.play("success");
         }
       } finally {

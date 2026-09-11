@@ -68,11 +68,14 @@
           "Time Out": record?.time_out || "",
           Status: record?.status || "Not recorded",
           "Minutes Late": Number(record?.minutes_late) || 0,
-          "Feeling": wellbeingValue(record, 0),
-          "Stress": wellbeingValue(record, 1),
-          "Motivation": wellbeingValue(record, 2),
-          "Comfort Talking": wellbeingValue(record, 3),
-          "Needs Today": wellbeingValue(record, 4)
+          "Legacy check-in: happiness": wellbeingValue(record, 0),
+          "Legacy check-in: class enjoyment": wellbeingValue(record, 1),
+          "Legacy check-in: safety and support": wellbeingValue(record, 2),
+          "Legacy check-in: activity completion": wellbeingValue(record, 3),
+          "Legacy check-in: readiness": wellbeingValue(record, 4),
+          "Mood": record?.emotion_checkin_3step?.mood || record?.emotion_label || '',
+          "Stress": record?.emotion_checkin_3step?.stress || '',
+          "Requested support": record?.emotion_checkin_3step?.need || ''
         });
       });
     });
