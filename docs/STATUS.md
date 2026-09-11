@@ -5,6 +5,12 @@ User confirms approved teachers/admins have all-class access. Deny pending and d
 Design source: task 01a07e4f-6532-7073-9cc8-e1c2571e8cc4. Verify selected layout/current decisions at alignment checkpoint, not merely logo completion.
 
 2026-09-12 checkpoint: 13 unit/queue tests PASS; 11 Firestore emulator tests PASS; revised synthetic Edge browser suite PASS. Actual daily scanner (not the stale test layout) verified. Candidate 3 branding confirmed in frontend task; full revised-layout approval not assumed. See FEATURE_ALIGNMENT.md, FRONTEND_ALIGNMENT_HANDOFF.md and TEST_RECORD.md.
-Integration remains NOT STARTED: competing analytics writers require a product decision. No production deployment/Firestore rule changes or notifications performed. Service-worker restart/offline QA, actual-camera rehearsal and complete reports/onboarding review remain outstanding. A passing browser subset is not release readiness.
+Integration remains NOT STARTED. No production deployment/Firestore rule changes or notifications performed. A passing browser subset is not release readiness.
 
-User supplied repository-local Git author: Mico <navarezmico@gmail.com>. Local stabilization checkpoint prepared; no push or deployment. Analytics remains undecided; see PRODUCT_DECISIONS.md. Do not interpret the latest clarification as approval of an AND/OR rule.
+User supplied repository-local Git author: Mico <navarezmico@gmail.com>. Checkpoint 3f61616 contains the preceding stabilization work; no push or deployment.
+
+September 12 continuation: expanded browser checks PASS for failed time-out, retry and optional skip; camera cleanup race repaired. Separate reliability suite PASS for static service-worker install/offline assets, durable queue tab reopen/account isolation with a mock write adapter, and real CSV/XLSX download contents. See TEST_RECORD.md for limits.
+
+Frontend specification aligned in FRONTEND_SPEC_V2.md; DESIGN_AUDIT.md contains current screenshots at desktop, tablet and phone widths. The prototype remains preserved. The user delegated the alert recommendation: ALERT_POLICY_RECOMMENDATION.md proposes explicit requests and check-ins for teacher review with dated academic/attendance context. No new analytics policy is implemented yet. No adviser reply is needed to complete this recommendation.
+
+Next implementation pass: unify competing analytics writers against the documented policy and interface plan, then integrate the aligned design from a rechecked stabilization revision. Whole-app term-grade/onboarding checks, final visual QA, physical camera rehearsals and deployed revision verification remain outstanding.

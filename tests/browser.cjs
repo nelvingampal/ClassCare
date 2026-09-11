@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 const { chromium } = require('playwright');
 const { initializeTestEnvironment } = require('@firebase/rules-unit-testing');
-const { doc, setDoc, getDocs, collection, updateDoc } = require('firebase/firestore');
+const { doc, setDoc, getDocs, collection, updateDoc, deleteDoc } = require('firebase/firestore');
 const H = require('../js/holistic-core.js');
 const base = 'http://127.0.0.1:5599';
 async function until(fn, message) {
@@ -74,6 +74,32 @@ async function until(fn, message) {
     await until(async()=> /Already recorded|Time Out/.test(await page.locator('#scan-status-label').textContent()),'Duplicate scan did not finish');
     assert.equal((await readFixture(async c => getDocs(collection(c.firestore(),'attendance')))).size,1);
     console.log('PASS duplicate scans do not create another daily record');
+    await page.evaluate(()=>{
+      window.originalEvaluate=Utils.computeHierarchicalAttendance;
+      Utils.computeHierarchicalAttendance=()=>({action:'time_out',status:'Present',minutes_late:0});
+      const db=ClassCare.getFirebase().db;window.originalTransaction=db.runTransaction.bind(db);
+      db.runTransaction=async()=>{throw Error('Synthetic transaction failure');};
+    });
+    await page.locator('#manual-qr-input').fill('TEST-001');await page.locator('#btn-manual-scan').click();
+    await page.getByText('Attendance not saved',{exact:true}).first().waitFor();
+    assert.equal((await readFixture(async c=>(await getDocs(collection(c.firestore(),'attendance'))).docs[0].data())).time_out,undefined);
+    await page.evaluate(()=>{ClassCare.getFirebase().db.runTransaction=window.originalTransaction;});
+    await page.locator('#manual-qr-input').fill('TEST-001');await page.locator('#btn-manual-scan').click();
+    await until(async()=>!!(await readFixture(async c=>(await getDocs(collection(c.firestore(),'attendance'))).docs[0].data())).time_out,'Retried time-out not saved');
+    await page.evaluate(()=>{Utils.computeHierarchicalAttendance=window.originalEvaluate;});
+    console.log('PASS failed time-out shows failure without changing records; retry writes time-out');
+    // Reset only synthetic daily attendance to exercise a fresh skipped check-in.
+    await env.withSecurityRulesDisabled(async c=>{for(const d of (await getDocs(collection(c.firestore(),'attendance'))).docs)await deleteDoc(d.ref);});
+    await page.reload();await page.locator('details.manual-panel summary').click();
+    const beforeSkip=(await readFixture(c=>getDocs(collection(c.firestore(),'emotional_checkins')))).size;
+    await page.locator('#manual-qr-input').fill('TEST-001');await page.locator('#btn-manual-scan').click();
+    await page.locator('#btn-skip-emotion').click();
+    await page.locator('#emotion-overlay').waitFor({state:'hidden'});
+    const skipped=await readFixture(async c=>(await getDocs(collection(c.firestore(),'attendance'))).docs[0].data());
+    assert.equal(skipped.checkin_skipped,true);assert.equal(skipped.emotion,null);
+    assert.equal((await readFixture(c=>getDocs(collection(c.firestore(),'emotional_checkins')))).size,beforeSkip);
+    console.log('PASS skip preserves attendance without inventing a response');
+
     await page.goto(base+'/teacher/deep-check.html');
     await page.locator('#kiosk-content').waitFor({state:'visible'});
     await page.locator('#manual-id').fill('TEST-001'); await page.locator('#manual-submit').click();

@@ -2575,6 +2575,7 @@
     State.scanner = null; State.scanning = false; State.transitioning = false; setScannerState("stopped", "Start the camera again when you are ready."); Utils.setLoading(button, false);
   }
   function cleanupScanner() {
+    clearTimeout(State.resetTimer);
     State._unsubSettings?.(); State._unsubSettings = null;
     State._unsubEnrollments?.(); State._unsubEnrollments = null;
     State.intervention.unsubAlerts?.(); State.intervention.unsubAlerts = null;
@@ -2594,7 +2595,12 @@
       try { State.activeVideoTrack.stop(); } catch (_) {}
       State.activeVideoTrack = null;
     }
-    if (State.scanner) { State.scanner.stop().catch(() => {}); State.scanner.clear?.(); State.scanner = null; }
+    if (State.scanner) {
+      const scanner=State.scanner; State.scanner=null;
+      // stop can throw synchronously; clear must wait for shutdown.
+      void Promise.resolve().then(()=>scanner.isScanning ? scanner.stop() : undefined)
+        .catch(()=>{}).then(()=>{try {scanner.clear?.();}catch(_){}});
+    }
     State.scanning = false; State.scanInFlight = false;
     if (activeKioskGesture) {
       try { activeKioskGesture.stop(); } catch (_) {}
@@ -2942,6 +2948,8 @@
 
   /* ---- Proper Component Cleanup, Reset, Unmount & Remount ---- */
   async function resetAndRemountScanner() {
+    const resetGeneration=State.generation;
+    const restartCamera=State.scanning || !!State.scanner;
     console.log("[scanner] Resetting and remounting camera component for next student...");
     State.transitioning = true;
     try {
@@ -3017,6 +3025,7 @@
 
     // 6. Remount and start a clean camera session
     await wait(150);
+    if (!restartCamera || !State.teacher || resetGeneration !== State.generation) return;
     try {
       await startScanner();
       console.log("[scanner] Camera remounted and ready for next student.");
@@ -3287,6 +3296,7 @@
   }
 
   async function handleDecodedText(raw) {
+    clearTimeout(State.resetTimer);
     let student;
     try {
       student = await ClassCareKioskData.lookup(raw, State.teacher);
@@ -3307,7 +3317,7 @@
         State.attendance.set(student.uid,rec);
         showResult(student,result.kind === 'time_out' ? 'Time Out' : rec.status,rec.time_in,rec.minutes_late || 0,result.kind === 'duplicate' ? 'duplicate' : 'saved',rec);
         if (result.kind === 'saved') await startWellbeingSurvey(student,rec);
-        else { Toast.info(result.kind === 'time_out' ? 'Time out recorded.' : 'Attendance already recorded today.'); setTimeout(() => resetAndRemountScanner(),2500); }
+        else { Toast.info(result.kind === 'time_out' ? 'Time out recorded.' : 'Attendance already recorded today.'); State.resetTimer=setTimeout(() => {void resetAndRemountScanner();},2500); }
       } catch (error) {
         showResultError('Attendance not saved',error.message + ' Retry the scan.');
         Toast.error('Attendance not saved. Reconnect and retry.');

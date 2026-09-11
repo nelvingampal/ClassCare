@@ -18,9 +18,13 @@ For each included element record: data collection/field or computed source, perm
 
 ## Outstanding review
 
-- Team decision: which analytics rule should be authoritative? Existing writers disagree; no new thresholds have been selected.
+- The user delegated a research-led policy recommendation. Use ALERT_POLICY_RECOMMENDATION.md for the proposed single follow-up policy; implement and verify it before connecting analytics UI. Do not wait for an adviser reply to continue the technical planning.
 - Verify full layout approval separately from Candidate 3 logo production.
 - Verify current grading policy with adviser; do not silently substitute the prototype's 0–100 term scale.
-- Complete stabilization browser verification and CSV/XLSX checks.
+- Expanded stabilization browser verification and CSV/XLSX checks PASS within TEST_RECORD.md's stated limits.
 - Recheck partner main, record reviewed stabilization revision, then create `codex/classcare-frontend-integration`.
 - Visual QA after integration at 1440, 768, 390; keyboard, focus, overflow, error recovery. Actual-camera rehearsal and deployment revision remain separate checks.
+
+## September 12 alignment result
+
+Read FRONTEND_SPEC_V2.md as the current element-to-source/action/check specification and DESIGN_AUDIT.md for screenshot-backed visual corrections. All elements listed for integration are mapped or excluded. The specification checkpoint is complete; final visual implementation and the proposed alert behavior remain work to perform. Compact the hero, separate term/summative entry, preserve exact questionnaire types and display missing data honestly. Candidate 3 logo approval does not imply approval of every layout detail.

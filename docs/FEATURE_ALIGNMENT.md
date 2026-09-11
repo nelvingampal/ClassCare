@@ -1,4 +1,4 @@
-# Feature-to-screen alignment — in progress
+# Feature-to-screen alignment — verified subset and integration specification
 
 Baseline: `3366b4e8ed79f8203dc283952b1aec828f207f7e`, rechecked against remote main. Working branch: `codex/classcare-stabilize`. This is source evidence plus explicitly identified local tests, not verification of Netlify or deployed Firestore rules.
 
@@ -23,4 +23,16 @@ Working = tested stated behavior; partial = implemented with gaps; absent = no m
 
 ## Integration checkpoint
 
-NOT COMPLETE. Remaining gates: browser failures resolved; analytics conflict decided; current questionnaire/score policy reconciled; every included control mapped to a permitted operation and acceptance check. No frontend integration branch has been created. Current production data and services remain untouched.
+Specification checkpoint COMPLETE for the listed integration elements in FRONTEND_SPEC_V2.md: every included control has a source, permitted operation and acceptance check or is excluded. The observations in the table above describe the initial audit; the September 12 updates below supersede its pending test statements. No frontend integration branch has been created. Current production data and services remain untouched.
+
+## September 12 verification updates
+
+- Daily attendance: arrival/duplicate plus injected failed time-out, unchanged record, successful retry PASS in the actual browser UI. Camera cleanup race fixed. Physical camera remains NOT RUN.
+- Optional daily check-in: explicit skip with no added emotional response PASS; missing answers remain missing.
+- Summative browser coverage: actual publish, roster save, existing correlation and acknowledgment PASS; deep-check offline retry is a separate scenario, not evidence of offline summative saving.
+- Reports: real CSV/XLSX download parsing PASS; stale XLSX headers fixed, 18 columns and complete autofilter verified.
+- Offline: service worker install/static offline access after tab reopen PASS. Durable queue tab reopen/account isolation/merged flush PASS with a mock writer. Full Firebase offline/reconnection and whole-browser restart remain UNVERIFIED.
+- Analytics: user delegated recommendation rather than waiting for adviser. ALERT_POLICY_RECOMMENDATION.md defines a proposed unified teacher follow-up policy. Existing dual writers are still PARTIAL/CONFLICT until replaced; old passing tests do not validate the proposal.
+- Design: four desktop views plus Overview at 768/390 reviewed in DESIGN_AUDIT.md. Final integrated layout approval remains outstanding.
+
+Remaining implementation gates: unified analytics with documented interface changes and tests, whole-app term-grade/onboarding review, recheck partner main, and integrated visual verification. Current source grading scales are retained as implementation constraints; their suitability is not established by this audit.
