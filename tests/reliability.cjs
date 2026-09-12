@@ -25,6 +25,7 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
     await page.close();page=await ctx.newPage();await page.goto(base+'/probe');
     assert.equal(await page.evaluate(async()=> (await fetch('/js/offline-sync.js')).ok),true);
     assert.equal(await page.evaluate(async()=> (await caches.match('/private-fixture'))!==undefined),false);
+    assert.equal(await page.evaluate(async()=> (await fetch('/teacher/overview-v3.css')).ok),true);
     console.log('PASS service worker installs, removes old private cache, and serves static assets after offline tab reopening');
     await ctx.setOffline(false);
     await page.evaluate(()=>{

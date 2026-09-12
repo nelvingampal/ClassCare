@@ -1,4 +1,15 @@
-# Updated ClassCare stabilization
+# ClassCare status — current checkpoint first
+
+## September 12 — post-Luna correction pass
+Active checkout: frontend-integration; branch codex/classcare-frontend-integration. Luna presentation commits through a692783 have been audited. Integration is PARTIAL, not complete. Earlier NOT STARTED / NOT CREATED statements below are historical checkpoints.
+
+Corrected teacher theme compatibility, compact full-class Overview roster sizing and service-worker caching of overview-v3.css. Removed unused V3 selectors and replaced inline-style-string selectors with explicit presentation classes. No application data logic, permissions, analytics policies, write handlers or schemas changed.
+
+Next integration checkpoint: finish mapping the real searchable roster/detail workflow to the accepted prototype while preserving the existing classroom picker. The live holistic surface remains in its existing dashboard location. Existing missing-score/table/copy issues from docs/audits/luna-review/REPORT.md remain separate follow-ups. Mobile redesign remains deferred; current shared CSS still affects smaller viewports.
+
+No push, merge or deployment. See docs/audits/luna-review/FIX_RECORD.md for current test evidence and limitations.
+
+## Historical checkpoints
 2026-09-11. Baseline main 3366b4e8ed79f8203dc283952b1aec828f207f7e; local branch codex/classcare-stabilize. Fresh checkout; older work preserved. Git history at this remote begins at this root commit, so comparison to September 6 is by file content rather than an assumed shared ancestor.
 IN PROGRESS: audit, local repair and synthetic verification. Frontend integration has NOT started. Source adds summative assessments, two kiosk paths and multiple overlapping analytics/notification paths. Existing frontend assumptions need revision.
 User confirms approved teachers/admins have all-class access. Deny pending and disabled staff; students must not read scores. Deployment uses unknown data; no live records or notifications accessed.
