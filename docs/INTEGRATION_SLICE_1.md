@@ -7,7 +7,7 @@ September 12, 2026. Branch: `codex/classcare-frontend-integration`. Scope is des
 - Added the selected Candidate 3 symbol to the existing teacher brand treatment without replacing the application shell.
 - Scoped the V3 sky-blue rail and Overview spacing styles to `body.v3-teacher`.
 - Reset the teacher app's internal `.app-content` scroll position when switching routes. This fixes a navigation presentation defect without changing data or route handlers.
-- Moved the existing live care surface to its existing Care Alerts panel after it mounts. Its listeners, alert data, actions and persistence remain unchanged; Overview no longer presents that legacy engine as the primary content.
+- Kept the existing live care surface on Overview. Its listeners, alert data, actions and persistence remain unchanged; this slice does not relocate the legacy engine into a hidden tab.
 - Copied only `classcare-symbol-color.svg` from the frozen prototype asset set. Prototype application files, fixtures and mock-data code were not copied.
 - Added the symbol to the existing static service-worker allowlist so the shell can retain the brand asset in the same controlled cache.
 
@@ -18,7 +18,7 @@ September 12, 2026. Branch: `codex/classcare-frontend-integration`. Scope is des
 - all current teacher route hashes reached their existing panels;
 - existing `#teacher-reports` section remained reachable;
 - internal content scroll reset to zero when returning to Overview;
-- the live care surface remained under `#tab-teacher-care-alerts`;
+- the live care surface remained under `#view-dashboard` and visible on Overview;
 - the selected logo asset was loaded by the existing teacher shell;
 - desktop Overview screenshot captured at 1440×1000;
 - no page JavaScript errors were recorded.

@@ -70,9 +70,17 @@ async function until(fn, message) {
     console.log('PASS actual daily scanner saves attendance and explicit three-step responses');
     await page.reload();
     await page.locator('details.manual-panel summary').click();
+    // Keep the duplicate assertion independent of the wall clock. After the
+    // configured afternoon time-out window, a real second scan is expected to
+    // record time-out rather than return the duplicate path.
+    await page.evaluate(()=>{
+      window.originalDuplicateEvaluate=Utils.computeHierarchicalAttendance;
+      Utils.computeHierarchicalAttendance=()=>({action:'time_in',status:'Present',minutes_late:0});
+    });
     await page.locator('#manual-qr-input').fill('TEST-001'); await page.locator('#btn-manual-scan').click();
     await until(async()=> /Already recorded|Time Out/.test(await page.locator('#scan-status-label').textContent()),'Duplicate scan did not finish');
     assert.equal((await readFixture(async c => getDocs(collection(c.firestore(),'attendance')))).size,1);
+    await page.evaluate(()=>{Utils.computeHierarchicalAttendance=window.originalDuplicateEvaluate;});
     console.log('PASS duplicate scans do not create another daily record');
     await page.evaluate(()=>{
       window.originalEvaluate=Utils.computeHierarchicalAttendance;
@@ -128,6 +136,7 @@ async function until(fn, message) {
     await page.waitForFunction(() => document.getElementById('assessment-select').options.length>1);
     const assessmentId = await page.locator('#assessment-select option').nth(1).getAttribute('value');
     await page.locator('#assessment-select').selectOption(assessmentId);
+    await page.waitForFunction(() => document.getElementById('score-live')?.textContent.includes('Live · confirmed by Firestore'));
     await page.locator('#score-rows input').fill('10'); await page.locator('#save-scores').click();
     await page.waitForFunction(() => document.getElementById('score-status').textContent.includes('score changes saved'));
     await page.getByText(/Intervention Needed: Fixture student/).waitFor();

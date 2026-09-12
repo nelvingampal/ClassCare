@@ -70,13 +70,14 @@ async function until(fn, message) {
     await page.evaluate(()=>{location.hash='teacher-overview';});
     await page.locator('#reference-student-carousel [data-student-uid]').first().waitFor();
     await page.waitForTimeout(500);
-    assert.equal(await page.locator('#holistic-live').evaluate(node=>node.parentElement?.id),'tab-teacher-care-alerts');
+    assert.equal(await page.locator('#holistic-live').evaluate(node=>node.parentElement?.id),'view-dashboard');
+    assert.equal(await page.locator('#holistic-live').isVisible(),true);
     assert.equal(await page.locator('.classcare-brand-icon').evaluate(node=>getComputedStyle(node).backgroundImage.includes('classcare-symbol-color.svg')),true);
     console.log('OVERVIEW POSITION',await page.evaluate(()=>({bodyScroll:document.body.scrollTop,docScroll:document.documentElement.scrollTop,mainScroll:document.querySelector('.app-main')?.scrollTop,contentScroll:document.querySelector('.app-content')?.scrollTop,summary:document.querySelector('.summary-header-card')?.getBoundingClientRect().toJSON(),record:document.querySelector('.workspace-right-col')?.getBoundingClientRect().toJSON()})));
     fs.mkdirSync('test-results/integration',{recursive:true});
     await page.setViewportSize({width:1440,height:1000});
     await page.screenshot({path:'test-results/integration/before-overview.png'});
     assert.deepEqual(errors,[]);
-    console.log('PASS desktop navigation/Overview presentation slice; live care remains on Care Alerts and secondary write actions were not exercised');
+    console.log('PASS desktop navigation/Overview presentation slice; live care remains on Overview and secondary write actions were not exercised');
   } finally { await browser?.close(); await env?.cleanup(); server.kill(); }
 })().catch(error=>{console.error(error);process.exitCode=1;});
