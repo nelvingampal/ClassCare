@@ -67,6 +67,16 @@ body.v3-teacher #app-shell {--v3-ink:#17364d;--v3-muted:#516575;--v3-sky:#eaf6ff
 .v3-teacher #tab-teacher-attendance #teacher-register {border:1px solid #d5e5ee;border-radius:18px;background:#fff;box-shadow:0 8px 24px #17364d0a;}
 .v3-teacher #tab-teacher-attendance #teacher-register .card-header {padding:20px 20px 14px;border-bottom:1px solid #e4eef5;}
 .v3-teacher #tab-teacher-attendance #teacher-register .data thead th {background:#eaf6ff;color:#17364d;border-bottom-color:#c7dfec;}
+.v3-teacher #tab-teacher-summative,.v3-teacher #tab-teacher-grades {max-width:1200px;}
+.v3-teacher #tab-teacher-summative>section.card,.v3-teacher #tab-teacher-grades #teacher-grades {border:1px solid #d5e5ee;border-radius:18px;background:#fff;box-shadow:0 8px 24px #17364d0a;}
+.v3-teacher #tab-teacher-summative .form-stack[style*="background:var(--bg-muted)"] {background:#f4faff!important;border-color:#d5e5ee!important;border-radius:14px!important;}
+.v3-teacher #tab-teacher-summative .cc-stat-card {border-color:#d5e5ee;background:#fbfdff;box-shadow:none;}
+.v3-teacher #tab-teacher-summative .cc-stat-alert {background:#fff8e8;border-color:#f2d58a;}
+.v3-teacher #tab-teacher-summative .cc-grid thead th,.v3-teacher #tab-teacher-grades .data thead th {background:#eaf6ff;color:#17364d;border-bottom-color:#c7dfec;}
+.v3-teacher #tab-teacher-summative .cc-grid tbody tr:hover,.v3-teacher #tab-teacher-grades .data tbody tr:hover {background:#f4faff;}
+.v3-teacher #tab-teacher-grades #teacher-grades>.card-header {padding:20px 20px 14px;border-bottom:1px solid #e4eef5;}
+.v3-teacher #tab-teacher-grades #teacher-grades>.form-stack {padding:20px;}
+.v3-teacher #tab-teacher-grades .status-badge {border-color:#d5e5ee;}
 @media(max-width:820px){
  .v3-teacher #app-shell .classcare-topnav {position:static;width:100%;height:auto;}
  .v3-teacher .classcare-topnav-inner {padding:14px;gap:10px;}
