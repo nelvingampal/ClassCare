@@ -41,11 +41,13 @@
   <script src="./analytics.js" defer></script>
   <script src="../js/shell.js" defer></script>
   <link rel="stylesheet" href="../js/styles.css" />
-<link rel="stylesheet" href="../js/holistic.css">
+  <link rel="stylesheet" href="../js/holistic.css">
+  <link rel="stylesheet" href="./overview-v3.css">
 
-<script src="../js/holistic-portals.js" defer></script>
+  <script src="../js/holistic-portals.js" defer></script>
+  <script src="./overview-v3.js" defer></script>
 </head>
-<body data-role="teacher" class="public-page h-screen overflow-hidden">
+<body data-role="teacher" class="public-page h-screen overflow-hidden v3-teacher">
   <div id="public-view" class="public-page h-screen max-h-screen overflow-hidden flex flex-col">
     <header class="public-header flex-shrink-0">
       <div class="public-header-inner">
@@ -1481,8 +1483,10 @@
           item.classList.toggle("active", isMatch);
         });
 
-        // Always scroll to top when changing major tabs so user is not scrolled down to random elements
+        // The teacher workspace scrolls inside .app-content; reset both scroll containers
+        // so a route change always starts at the destination's heading.
         window.scrollTo({ top: 0, behavior: "instant" });
+        document.querySelector(".app-content")?.scrollTo({ top: 0, behavior: "instant" });
       }
 
       window.addEventListener("hashchange", () => switchTeacherTab(window.location.hash));

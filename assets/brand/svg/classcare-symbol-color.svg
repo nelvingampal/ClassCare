@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="-12 -8 624 336" role="img" aria-labelledby="title desc">
+  <title id="title">ClassCare symbol — color</title>
+  <desc id="desc">Flat open-book symbol derived from the approved rounded-center vector master.</desc>
+  <defs>
+    <path id="outer-page" d="M30 0C75 0 126 17 166 49C208 84 228 150 229 231L229 296C171 270 102 253 28 249C11 248 0 237 0 220L0 27C0 10 13 0 30 0Z"/>
+  </defs>
+  <use xlink:href="#outer-page" fill="#63B9EA"/>
+  <use xlink:href="#outer-page" transform="translate(600 0) scale(-1 1)" fill="#63B9EA"/>
+  <path d="M300 27C268 27 236 35 207 54C201 58 199 65 203 72C228 116 248 190 252 293C252 309 273 320 300 320C327 320 348 309 348 293C352 190 372 116 397 72C401 65 399 58 393 54C364 35 332 27 300 27Z" fill="#17364D"/>
+</svg>

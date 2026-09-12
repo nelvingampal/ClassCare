@@ -24,6 +24,10 @@ Baseline: application 630ef2e; September 12, 2026. This checklist is the integra
 | Student portal and assessment schedule | student/index.html and scripts | Schedule/no score browser PASS | Existing student functions retained; never reintroduce staff score UI |
 | Admin portal and management tools | admin/index.html and scripts | Portal load PASS; full actions UNVERIFIED | Keep pages/scripts intact; smoke-check if shared CSS or auth touched |
 
+## Slice 1 status
+
+`docs/INTEGRATION_SLICE_1.md` records the desktop teacher-shell and Overview presentation change. All listed baseline route checks passed. The remaining rows are not inferred complete from this slice and remain subject to their own integration commits.
+
 ## Per-step sign-off template
 
 - Screen and commit:

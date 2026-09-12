@@ -34,8 +34,8 @@ Keep existing supplemental tools accessible under a clearly named More tools are
 ## Ordered commits and acceptance
 
 1. Establish before-change route/DOM inventory and smoke checks, especially untested secondary tools and term grades. Capture pre-existing failures separately.
-2. Create `codex/classcare-frontend-integration` from the reviewed stabilization commit; recheck remote first. Use a separate checkout if necessary to avoid mixing drafts. No push, merge or deployment.
-3. Integrate teacher navigation/branding and Overview only. Check old deep links, logout/auth, class/date and counts; preserve access to all other tools. Compare at 1440/768/390.
+2. DONE for this slice: `codex/classcare-frontend-integration` was created from the reviewed stabilization commit after the remote recheck. No push, merge or deployment.
+3. IN PROGRESS / desktop slice complete: integrated teacher navigation/branding and Overview presentation only. Route reachability, internal scroll reset, existing Care Alerts placement and 1440 desktop capture pass. Tablet/phone comparison is deferred by user request. Auth/logout, class/date persistence and counts remain application checks to broaden before merge.
 4. Integrate Students/detail. Check roster/search/selection, exact evidence and protected data access.
 5. Integrate Attendance and check-ins. Test the explicit-offer change separately from layout, plus scan/save/duplicate/time-out/skip/failure/retry and exports.
 6. Integrate Term and Summative views separately. Run real synthetic save/export/validation/conflict/partial-save checks, not just fixture tests.
