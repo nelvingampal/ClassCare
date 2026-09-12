@@ -56,6 +56,17 @@ body.v3-teacher #app-shell {--v3-ink:#17364d;--v3-muted:#516575;--v3-sky:#eaf6ff
 .v3-teacher #tab-teacher-students .choose-item-meta {margin-top:4px;color:#516575;}
 .v3-teacher #tab-teacher-students .choose-result {min-height:54px;padding:13px 14px;border-color:#d5e5ee;border-radius:12px;background:#f4faff;color:#17364d;font-weight:700;}
 .v3-teacher #tab-teacher-students #btn-spin {min-height:44px;border-radius:10px;background:#165a83;}
+.v3-teacher #tab-teacher-attendance {max-width:1200px;}
+.v3-teacher #tab-teacher-attendance .v3-attendance-kiosk-grid {gap:16px!important;}
+.v3-teacher #tab-teacher-attendance .v3-attendance-kiosk-card {border:1px solid #d5e5ee!important;border-radius:18px!important;box-shadow:0 8px 24px #17364d0a!important;}
+.v3-teacher #tab-teacher-attendance .v3-attendance-daily {background:#165a83!important;}
+.v3-teacher #tab-teacher-attendance .v3-attendance-deep {color:#17364d!important;background:#eaf6ff!important;box-shadow:0 8px 24px #17364d12!important;}
+.v3-teacher #tab-teacher-attendance .v3-attendance-deep h3,.v3-teacher #tab-teacher-attendance .v3-attendance-deep p {color:#17364d!important;}
+.v3-teacher #tab-teacher-attendance .v3-attendance-deep div[style*="background:rgba(255,255,255,0.22)"] {color:#165a83!important;background:#fff!important;}
+.v3-teacher #tab-teacher-attendance .page-header {padding:18px 0 14px;border-top:1px solid #d5e5ee;}
+.v3-teacher #tab-teacher-attendance #teacher-register {border:1px solid #d5e5ee;border-radius:18px;background:#fff;box-shadow:0 8px 24px #17364d0a;}
+.v3-teacher #tab-teacher-attendance #teacher-register .card-header {padding:20px 20px 14px;border-bottom:1px solid #e4eef5;}
+.v3-teacher #tab-teacher-attendance #teacher-register .data thead th {background:#eaf6ff;color:#17364d;border-bottom-color:#c7dfec;}
 @media(max-width:820px){
  .v3-teacher #app-shell .classcare-topnav {position:static;width:100%;height:auto;}
  .v3-teacher .classcare-topnav-inner {padding:14px;gap:10px;}
