@@ -256,6 +256,10 @@
     if ($('#auth-required')) $('#auth-required').hidden = false;
     if ($('#kiosk-content')) $('#kiosk-content').hidden = true;
     cleanupScanner(); State.generation++; State.students.clear(); State.attendance.clear(); State.teacher = null;
+    $("#directory-list")?.replaceChildren();
+    if ($("#directory-search")) $("#directory-search").value = '';
+    if ($("#directory-section")) $("#directory-section").innerHTML = '<option value="">All loaded classes</option>';
+    if ($("#directory-count")) $("#directory-count").textContent = 'Sign in to view students.';
     publicView?.classList.remove("hidden"); appShell?.classList.add("hidden");
     viewGuest?.classList.remove("hidden"); viewDashboard?.classList.add("hidden"); userChip?.classList.add("hidden");
     ClassCareUI?.setAuthState(false);
@@ -3553,7 +3557,43 @@
   // ---------- Reference UI Interactive Controller (Dynamic Firestore Binding) ----------
   let _referenceHeroSelectedUid = null;
 
+  // Reuse the authenticated roster and record renderer; no additional data subscriptions.
+  function renderStudentDirectory() {
+    const list = $("#directory-list"), search = $("#directory-search"), section = $("#directory-section");
+    if (!list || !search || !section) return;
+    const students = Array.from(State.students.values());
+    const selectedSection = section.value;
+    const sections = [...new Set(students.map(student => student.section).filter(Boolean))].sort();
+    section.innerHTML = '<option value="">All loaded classes</option>' + sections.map(value => `<option value="${escapeAttr(value)}">${escapeHtml(value)}</option>`).join('');
+    section.value = sections.includes(selectedSection) ? selectedSection : '';
+    const query = search.value.trim().toLowerCase();
+    const matches = students.filter(student => (!section.value || student.section === section.value) &&
+      `${student.first_name || ''} ${student.last_name || ''} ${student.student_id || ''}`.toLowerCase().includes(query))
+      .sort((a,b) => `${a.last_name || ''} ${a.first_name || ''}`.localeCompare(`${b.last_name || ''} ${b.first_name || ''}`));
+    $("#directory-count").textContent = `${matches.length} of ${students.length} students`;
+    list.innerHTML = matches.length ? matches.map(student => `<div class="directory-row">
+      <div><strong>${escapeHtml(`${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Student')}</strong>
+      <span>ID: ${escapeHtml(student.student_id || 'Not provided')} · ${escapeHtml(student.section || 'No class recorded')}</span></div>
+      <button type="button" class="btn btn-secondary" data-directory-review="${escapeAttr(student.uid)}" aria-label="Review records for ${escapeAttr(`${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Student')}">Review records</button>
+    </div>`).join('') : '<div class="state-panel"><strong>No students found</strong><span>Try another name, ID or class. Missing students can be checked in Manage enrollment.</span></div>';
+    search.oninput = renderStudentDirectory;
+    section.onchange = renderStudentDirectory;
+    list.onclick = event => {
+      const button = event.target.closest('[data-directory-review]');
+      const student = button && State.students.get(button.dataset.directoryReview);
+      if (!student) return;
+      _referenceHeroSelectedUid = student.uid;
+      updateRecordOverviewCard(student);
+      document.querySelector('.classcare-nav-links a[href="#teacher-overview"]')?.click();
+      requestAnimationFrame(() => {
+        const title = $("#record-card-title");
+        if (title) { title.tabIndex = -1; title.focus({preventScroll:true}); title.scrollIntoView({block:'center'}); }
+      });
+    };
+  }
+
   async function renderDynamicReferenceHero() {
+    renderStudentDirectory();
     const carousel = $("#reference-student-carousel");
     if (!carousel) return;
 

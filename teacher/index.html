@@ -503,7 +503,7 @@
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                     <span id="workspace-footer-count">0 enrolled students</span>
                   </div>
-                  <a href="#teacher-enrollment" class="workspace-left-footer-btn">View all students</a>
+                  <a href="#teacher-students" class="workspace-left-footer-btn">View all students</a>
                 </div>
               </div>
 
@@ -840,11 +840,24 @@
 
         <!-- TAB 4: STUDENTS -->
         <div id="tab-teacher-students" class="teacher-tab-panel hidden">
+          <section class="card student-directory" aria-labelledby="student-directory-title">
+            <div class="card-header">
+              <div><h2 class="card-title" id="student-directory-title">Student directory</h2>
+              <p class="card-subtitle">Search the loaded class roster and review existing records in Overview.</p></div>
+              <a class="btn btn-secondary" href="#teacher-enrollment">Manage enrollment</a>
+            </div>
+            <div class="directory-filters">
+              <label>Search name or student ID<input id="directory-search" type="search" placeholder="Search students" autocomplete="off"></label>
+              <label>Class<select id="directory-section"><option value="">All loaded classes</option></select></label>
+            </div>
+            <p id="directory-count" role="status">Loading student directory…</p>
+            <div id="directory-list" class="directory-list"></div>
+          </section>
           <!-- Choose a Student Wheel/Picker -->
           <section id="choose-student" class="card choose-student">
             <div class="card-header">
               <div>
-                <h2 class="card-title">Choose a student</h2>
+                <h2 class="card-title">Classroom activity picker</h2>
                 <p class="card-subtitle">Select from students with a recorded arrival.</p>
               </div>
               <button id="btn-rebuild" class="btn btn-secondary btn-sm" type="button">Refresh list</button>

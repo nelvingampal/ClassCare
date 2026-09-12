@@ -82,6 +82,23 @@ async function until(fn, message) {
     assert.ok(geometry.height<=150 && geometry.card<150,JSON.stringify(geometry));
     const logo=await page.locator('.classcare-brand-icon').evaluate(async node=>{const src=getComputedStyle(node).backgroundImage.match(/url\(["']?(.*?)["']?\)/)[1];const image=new Image();image.src=src;await image.decode();return image.naturalWidth;});
     assert.ok(logo>0,'Brand asset decodes');
+    await page.locator('.classcare-nav-links a[href="#teacher-students"]').click();
+    await page.waitForFunction(()=>document.querySelectorAll('[data-directory-review]').length===30);
+    await page.locator('#directory-search').fill('VIS-30');
+    assert.equal(await page.locator('[data-directory-review]').count(),1);
+    await page.locator('[data-directory-review]').press('Enter');
+    await page.locator('#tab-teacher-overview').waitFor({state:'visible'});
+    assert.match(await page.locator('#record-card-title').textContent(),/Sample Student 30/);
+    assert.equal(await page.locator('#record-card-title').evaluate(node=>node===document.activeElement),true);
+    await page.locator('.classcare-nav-links a[href="#teacher-students"]').click();
+    assert.equal(await page.locator('#directory-search').inputValue(),'VIS-30');
+    await page.locator('#directory-search').fill('no-such-student');
+    assert.equal(await page.locator('[data-directory-review]').count(),0);
+    assert.match(await page.locator('#directory-list').textContent(),/No students found/);
+    await page.locator('#directory-search').fill('');
+    await page.locator('#directory-section').selectOption('Grade 5-A');
+    assert.equal(await page.locator('[data-directory-review]').count(),30);
+    assert.equal(await page.locator('#btn-spin').count(),1,'Existing picker retained exactly once');
     for(const theme of ['light','dark']) {
       await page.evaluate(theme=>{if(Theme.get()!==theme)Theme.toggle();},theme);
       for(const route of ['overview','students','attendance','summative','grades','care-alerts']) {
@@ -99,6 +116,9 @@ async function until(fn, message) {
         await page.screenshot({path:'test-results/integration/'+theme+'-'+route+'.png'});
       }
     }
+    await page.evaluate(()=>ClassCare.getFirebase().auth.signOut());
+    await page.waitForFunction(()=>document.querySelectorAll('[data-directory-review]').length===0);
+    assert.equal(await page.locator('#directory-search').inputValue(),'');
     assert.deepEqual(errors,[]);
     console.log('PASS desktop navigation/Overview presentation slice; live care remains on Overview and secondary write actions were not exercised');
   } finally { await browser?.close(); await env?.cleanup(); server.kill(); }

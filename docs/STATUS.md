@@ -1,5 +1,10 @@
 # ClassCare status — current checkpoint first
 
+## September 13 — directory-to-record connection
+Student directory added using the existing loaded roster, with name/ID search, class selection, empty results and keyboard Review records navigation to the existing Overview record renderer. Enrollment and the existing classroom picker remain available. PASS: 13 unit checks; final synthetic integration suite including correct record/focus, search persistence, sign-out cleanup, 30 students and both themes. No push/deployment; mobile remains deferred.
+
+IMPORTANT: existing teacher roster query/assignment filtering conflicts with approved all-class access. The directory labels its scope as loaded classes. Query-scope correction and full standalone detail/history parity remain open. See STUDENTS_DIRECTORY_SLICE.md. Do not mark overall integration complete.
+
 ## September 12 — post-Luna correction pass
 Active checkout: frontend-integration; branch codex/classcare-frontend-integration. Luna presentation commits through a692783 have been audited. Integration is PARTIAL, not complete. Earlier NOT STARTED / NOT CREATED statements below are historical checkpoints.
 
