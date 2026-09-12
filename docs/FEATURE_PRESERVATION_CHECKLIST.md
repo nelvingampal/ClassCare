@@ -26,7 +26,7 @@ Baseline: application 630ef2e; September 12, 2026. This checklist is the integra
 
 ## Slice 1 status
 
-`docs/INTEGRATION_SLICE_1.md` records the desktop teacher-shell and Overview presentation change. All listed baseline route checks passed. The remaining rows are not inferred complete from this slice and remain subject to their own integration commits.
+`docs/INTEGRATION_SLICE_1.md` records the desktop teacher-shell, Overview and existing Students-picker presentation changes. All listed baseline route checks passed. The remaining rows are not inferred complete from this slice and remain subject to their own integration commits.
 
 ## Per-step sign-off template
 
