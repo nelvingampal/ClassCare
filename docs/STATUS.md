@@ -1,5 +1,10 @@
 # ClassCare status — current checkpoint first
 
+## September 13 — class access and focused detail verified
+Dashboard/scanner roster loading now follows approved all-class staff access; class selection is a view filter. Students detail stays inside Students using the existing single record panel; Back restores directory focus and Overview placement. Missing-score fallback, duplicate attendance headers and outdated daily check-in copy corrected. See CLASS_ACCESS_AND_DETAIL.md for scope and limits.
+
+PASS: 13 unit tests, 11 Firestore rules tests, complete existing browser suite and final integration suite with two classes / 31 students, actual 8-of-10 score and daily response fields, missing history, eight-column attendance, navigation/focus and sign-out cleanup. Detail screenshots reviewed in both themes. No production access, push, merge or deployment. Mobile redesign and physical equipment rehearsal remain pending. Existing detail source limits are explicitly labeled; full retrospective record aggregation and independent supplementary-tool scope are not claimed complete.
+
 ## September 13 — directory-to-record connection
 Student directory added using the existing loaded roster, with name/ID search, class selection, empty results and keyboard Review records navigation to the existing Overview record renderer. Enrollment and the existing classroom picker remain available. PASS: 13 unit checks; final synthetic integration suite including correct record/focus, search persistence, sign-out cleanup, 30 students and both themes. No push/deployment; mobile remains deferred.
 

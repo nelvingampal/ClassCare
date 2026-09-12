@@ -508,7 +508,7 @@
               </div>
 
               <!-- RIGHT COLUMN: DETAILED RECORDS VIEW -->
-              <div class="workspace-right-col">
+              <div class="workspace-right-col" id="student-record-panel">
                 <!-- Header: Name, ID, Date range selector -->
                 <div class="record-student-hero">
                   <div class="record-student-profile">
@@ -521,7 +521,7 @@
                   <div class="record-student-actions">
                     <div class="record-period-pill">
                       <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                      <span>Review period: <strong id="record-card-date">Today</strong></span>
+                      <span>Viewed on: <strong id="record-card-date">Today</strong></span>
                     </div>
                     <button type="button" class="btn-review-student-action" id="btn-review-records-action">
                       View emotional history
@@ -569,7 +569,7 @@
                       <div class="pastel-col-sub"><span id="metric-score-early-meta">Not recorded</span></div>
                       <div class="pastel-col-val" style="margin-top:2px;">
                         <span class="score-big-num" id="metric-score-early">—</span>
-                        <span class="score-scale-denom">/ 100</span>
+                        <span class="score-scale-denom">%</span>
                       </div>
                     </div>
                     <div>
@@ -577,7 +577,7 @@
                       <div class="pastel-col-sub"><span id="metric-score-late-meta">Not recorded</span></div>
                       <div class="pastel-col-val" style="margin-top:2px;">
                         <span class="score-big-num" id="metric-score-late">—</span>
-                        <span class="score-scale-denom">/ 100</span>
+                        <span class="score-scale-denom">%</span>
                       </div>
                     </div>
                   </div>
@@ -771,11 +771,11 @@
               <div class="v3-attendance-kiosk-card v3-attendance-daily" style="background:linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);color:#ffffff;border-radius:18px;padding:22px;box-shadow:0 10px 25px -4px rgba(37,99,235,0.3);display:flex;flex-direction:column;justify-content:space-between;gap:14px;">
                 <div>
                   <div class="v3-kiosk-label" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.22);padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:750;letter-spacing:0.04em;text-transform:uppercase;margin-bottom:8px;">
-                    ⚡ Fast Kiosk Flow · 1-Question
+                    Daily attendance · Optional check-in
                   </div>
                   <h3 style="margin:0 0 6px;font-size:1.22rem;font-weight:800;color:#ffffff;">Daily Attendance Kiosk</h3>
                   <p style="margin:0;font-size:0.88rem;line-height:1.5;color:rgba(255,255,255,0.92);">
-                    Fast classroom arrival scanning. Scans student ID card → instant 1-question mood overlay (😊 Happy, 😐 Okay, 😢 Sad, 😣 Stressed) → immediately logs attendance &amp; mood to Firestore and resets camera.
+                    Scan a student ID to record attendance. After arrival is saved, students may answer the three-step check-in or skip it.
                   </p>
                 </div>
                 <div>
@@ -831,7 +831,7 @@
             </div>
             <div class="table-wrap">
               <table class="data">
-                <thead><tr><th>Student</th><th>ID</th><th>Time in</th><th>Time out</th><th>Attendance</th><th>Emotional Check</th><th>Flag</th><th class="align-right">Action</th></tr></thead>
+                <thead><tr><th>Student</th><th>ID</th><th>Time in</th><th>Time out</th><th>Attendance</th><th data-emotion-column="true">Emotional check</th><th data-alert-column="true">Flag</th><th class="align-right">Action</th></tr></thead>
                 <tbody id="attendance-tbody"></tbody>
               </table>
             </div>
@@ -843,15 +843,20 @@
           <section class="card student-directory" aria-labelledby="student-directory-title">
             <div class="card-header">
               <div><h2 class="card-title" id="student-directory-title">Student directory</h2>
-              <p class="card-subtitle">Search the loaded class roster and review existing records in Overview.</p></div>
+              <p class="card-subtitle">Search the student roster and review dated attendance, scores and check-ins.</p></div>
               <a class="btn btn-secondary" href="#teacher-enrollment">Manage enrollment</a>
             </div>
             <div class="directory-filters">
               <label>Search name or student ID<input id="directory-search" type="search" placeholder="Search students" autocomplete="off"></label>
-              <label>Class<select id="directory-section"><option value="">All loaded classes</option></select></label>
+              <label>Class<select id="directory-section"><option value="">All classes</option></select></label>
             </div>
             <p id="directory-count" role="status">Loading student directory…</p>
             <div id="directory-list" class="directory-list"></div>
+          </section>
+          <section id="directory-detail" class="hidden" aria-label="Selected student records">
+            <button id="directory-back" class="btn btn-secondary" type="button">Back to directory</button>
+            <div id="directory-record-mount"></div>
+            <p>Attendance and check-in summaries use the recent loaded history (up to 14 days). Summative scores are those recorded by the signed-in staff member. <a href="#teacher-grades">Open term grades</a> for the separate term-grade records.</p>
           </section>
           <!-- Choose a Student Wheel/Picker -->
           <section id="choose-student" class="card choose-student">
@@ -1474,6 +1479,7 @@
       function switchTeacherTab(hash) {
         const rawHash = (hash || window.location.hash || "#teacher-overview").split("?")[0];
         const targetTabId = TAB_ROUTES[rawHash] || "tab-teacher-overview";
+        if (targetTabId !== "tab-teacher-students") window.restoreTeacherRecord?.();
 
         // Memory & camera leak defense: Pause camera loop if switching away from scanner
         if (targetTabId !== "tab-teacher-scanner") {
@@ -1535,7 +1541,7 @@
               recordAvatar.textContent = initials;
             }
             if (reviewBtn) {
-              reviewBtn.textContent = `Review ${name}’s records`;
+              reviewBtn.textContent = 'View emotional history';
             }
           }
         });

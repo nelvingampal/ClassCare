@@ -166,26 +166,9 @@
     return normalizedActual === normalizedExpected || normalizedActual.startsWith(normalizedExpected) || normalizedExpected.startsWith(normalizedActual);
   }
   function getTeacherAssignedSections(user) {
-    if (!user || normalizeRole(user.role) === "admin") return [];
-    const list = [];
-    if (Array.isArray(user.teaching_assignments) && user.teaching_assignments.length) {
-      user.teaching_assignments.forEach(a => {
-        const sec = typeof a === "object" ? a?.section : a;
-        const v = sectionValue(sec);
-        if (v && !list.includes(v)) list.push(v);
-      });
-    }
-    if (Array.isArray(user.assigned_sections) && user.assigned_sections.length) {
-      user.assigned_sections.forEach(s => {
-        const v = sectionValue(s);
-        if (v && !list.includes(v)) list.push(v);
-      });
-    }
-    if (user.section) {
-      const v = sectionValue(user.section);
-      if (v && !list.includes(v)) list.push(v);
-    }
-    return list;
+    // Assignments are metadata, not access limits: approved staff can review all classes.
+    // Authentication and approval are checked before dashboard initialization; rules enforce access.
+    return [];
   }
   function matchesSectionFilter(student) {
     const selected = sectionKey(State.section); if (!selected) return true;
@@ -256,9 +239,10 @@
     if ($('#auth-required')) $('#auth-required').hidden = false;
     if ($('#kiosk-content')) $('#kiosk-content').hidden = true;
     cleanupScanner(); State.generation++; State.students.clear(); State.attendance.clear(); State.teacher = null;
+    window.restoreTeacherRecord?.();
     $("#directory-list")?.replaceChildren();
     if ($("#directory-search")) $("#directory-search").value = '';
-    if ($("#directory-section")) $("#directory-section").innerHTML = '<option value="">All loaded classes</option>';
+    if ($("#directory-section")) $("#directory-section").innerHTML = '<option value="">All classes</option>';
     if ($("#directory-count")) $("#directory-count").textContent = 'Sign in to view students.';
     publicView?.classList.remove("hidden"); appShell?.classList.add("hidden");
     viewGuest?.classList.remove("hidden"); viewDashboard?.classList.add("hidden"); userChip?.classList.add("hidden");
@@ -872,7 +856,7 @@
     } else {
       sections = Array.from(new Set(Array.from(State.sections).map(sectionValue).filter(Boolean))).sort((a, b) => a.localeCompare(b));
     }
-    const html = `<option value="">All assigned sections</option>${sections.map(section => `<option value="${escapeAttr(section)}">${escapeHtml(section)}</option>`).join("")}`;
+    const html = `<option value="">All classes</option>${sections.map(section => `<option value="${escapeAttr(section)}">${escapeHtml(section)}</option>`).join("")}`;
     if (select) select.innerHTML = html;
     if (kioskSelect) kioskSelect.innerHTML = html;
   }
@@ -3556,6 +3540,15 @@
 
   // ---------- Reference UI Interactive Controller (Dynamic Firestore Binding) ----------
   let _referenceHeroSelectedUid = null;
+  let recordHomeMarker = null;
+  function restoreTeacherRecord() {
+    const panel = $("#student-record-panel");
+    if (recordHomeMarker && panel) recordHomeMarker.after(panel);
+    $("#directory-detail")?.classList.add('hidden');
+    $(".student-directory")?.classList.remove('hidden');
+    $("#choose-student")?.classList.remove('hidden');
+  }
+  window.restoreTeacherRecord = restoreTeacherRecord;
 
   // Reuse the authenticated roster and record renderer; no additional data subscriptions.
   function renderStudentDirectory() {
@@ -3564,7 +3557,7 @@
     const students = Array.from(State.students.values());
     const selectedSection = section.value;
     const sections = [...new Set(students.map(student => student.section).filter(Boolean))].sort();
-    section.innerHTML = '<option value="">All loaded classes</option>' + sections.map(value => `<option value="${escapeAttr(value)}">${escapeHtml(value)}</option>`).join('');
+    section.innerHTML = '<option value="">All classes</option>' + sections.map(value => `<option value="${escapeAttr(value)}">${escapeHtml(value)}</option>`).join('');
     section.value = sections.includes(selectedSection) ? selectedSection : '';
     const query = search.value.trim().toLowerCase();
     const matches = students.filter(student => (!section.value || student.section === section.value) &&
@@ -3584,7 +3577,16 @@
       if (!student) return;
       _referenceHeroSelectedUid = student.uid;
       updateRecordOverviewCard(student);
-      document.querySelector('.classcare-nav-links a[href="#teacher-overview"]')?.click();
+      const panel = $("#student-record-panel");
+      if (!recordHomeMarker && panel) {
+        recordHomeMarker = document.createComment('Shared student record home');
+        panel.before(recordHomeMarker);
+      }
+      if (panel) $("#directory-record-mount")?.append(panel);
+      $(".student-directory")?.classList.add('hidden');
+      $("#choose-student")?.classList.add('hidden');
+      $("#directory-detail")?.classList.remove('hidden');
+      $("#directory-back").onclick = () => { restoreTeacherRecord(); search.focus(); };
       requestAnimationFrame(() => {
         const title = $("#record-card-title");
         if (title) { title.tabIndex = -1; title.focus({preventScroll:true}); title.scrollIntoView({block:'center'}); }
@@ -3631,7 +3633,7 @@
     const rosterStudents = students;
     const avatarClasses = ["avatar-blue", "avatar-mint", "avatar-sky"];
 
-    if (!_referenceHeroSelectedUid || !rosterStudents.some(s => s.uid === _referenceHeroSelectedUid)) {
+    if (!_referenceHeroSelectedUid || !State.students.has(_referenceHeroSelectedUid)) {
       _referenceHeroSelectedUid = rosterStudents[0].uid;
     }
 
@@ -3694,7 +3696,7 @@
     const firstName = student.first_name || name.split(" ")[0] || "Student";
 
     const titleEl = $("#record-card-title");
-    if (titleEl) titleEl.textContent = `Looking at ${firstName}’s recent records`;
+    if (titleEl) titleEl.textContent = `Looking at ${name}’s recent records`;
 
     const dateRangeEl = $("#record-card-date");
     if (dateRangeEl) {
@@ -3728,15 +3730,7 @@
 
     // Score records
     const scList = (data.scores || []).filter(r => r.studentId === uid);
-    const cachedGrade = State.intervention?.gradeCache?.get(uid);
-    if (cachedGrade && !scList.length) {
-      scList.push({
-        score: cachedGrade.score,
-        maxScore: cachedGrade.maxScore || 100,
-        subject: cachedGrade.subject || "Subject",
-        assessmentDate: cachedGrade.date || Utils.todayIso()
-      });
-    }
+    // A term-grade average is not a summative assessment. Missing records stay missing.
     const scores = recent(scList);
 
     // Checks / emotion records
@@ -3756,12 +3750,12 @@
       const score=scores[i], check=checks[i];
       put('metric-score-'+side,score ? ClassCareHolistic.percent(score.score,score.maxScore)?.toFixed(1) || '—' : '—');
       put('metric-score-'+side+'-meta',score ? score.subject+' · '+score.assessmentDate+' ('+score.score+'/'+score.maxScore+')' : 'Not recorded');
-      put('metric-support-'+side,check ? (check.emotion_label || check.emotion)+' · '+check.date : 'Not recorded');
+      put('metric-support-'+side,check ? [check.mood || check.emotion_label || check.emotion || 'Response recorded',check.stress,check.need,check.date || 'Date not recorded'].filter(Boolean).join(' · ') : 'Not recorded');
     });
 
     const btnAction = $("#btn-review-records-action");
     if (btnAction) {
-      btnAction.textContent = `Review ${firstName}’s records`;
+      btnAction.textContent = 'View emotional history';
       btnAction.onclick = () => openStudentEmotionTimelineModal(uid);
     }
 

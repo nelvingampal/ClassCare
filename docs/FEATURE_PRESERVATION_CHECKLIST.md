@@ -40,3 +40,5 @@ Baseline: application 630ef2e; September 12, 2026. This checklist is the integra
 - Remaining issues and rollback commit:
 
 No feature is removed solely because the prototype omits it. No wholesale replacement of working application files with prototype files. A passing prototype test never substitutes for an application permission or persistence check.
+
+September 13: CLASS_ACCESS_AND_DETAIL.md records the all-class dashboard query correction, single shared Students detail panel, duplicate-column repair, explicit source limits and fresh unit/rules/full-browser/targeted-integration evidence. Earlier NOT RUN statements are historical; untested supplementary actions remain unverified.

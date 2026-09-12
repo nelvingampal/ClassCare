@@ -12,25 +12,25 @@ body.v3-teacher #app-shell {--v3-ink:var(--text-primary);--v3-muted:var(--text-s
 .v3-teacher #app-shell .app-main {margin-left:232px!important;width:calc(100% - 232px)!important;max-width:none!important;}
 .v3-teacher #app-shell .app-content {padding:32px 40px 48px!important;max-width:1450px!important;}
 .v3-teacher #view-dashboard>.cc-banner {padding:8px;margin-bottom:12px;background:var(--bg-card);border-radius:12px;}
-.v3-teacher #tab-teacher-overview {color:var(--text-primary);}
-.v3-teacher #tab-teacher-overview .dashboard-hero-section {background:none;padding:0;box-shadow:none;}
-.v3-teacher #tab-teacher-overview .summary-header-card {display:flex;flex-wrap:wrap;gap:16px;padding:18px;background:var(--bg-card);border:1px solid var(--border);box-shadow:none;border-radius:16px;}
-.v3-teacher #tab-teacher-overview .summary-header-left {display:flex;flex-wrap:wrap;gap:16px;flex:1;min-width:0;}
-.v3-teacher #tab-teacher-overview .summary-pills-list {width:100%;display:flex;gap:10px;}
-.v3-teacher #tab-teacher-overview .summary-status-pill {flex:1;padding:14px;font-size:16px;justify-content:center;border-radius:12px;white-space:normal;}
-.v3-teacher #tab-teacher-overview .context-bar {margin:16px 0;background:var(--bg-card);box-shadow:none;}
-.v3-teacher #tab-teacher-overview .workspace-two-col {display:flex;flex-direction:column;gap:16px;margin-top:18px;}
-.v3-teacher #tab-teacher-overview .workspace-left-col {width:100%;padding:16px;max-height:none;border:1px solid var(--border);border-radius:16px;background:var(--bg-card);}
-.v3-teacher #tab-teacher-overview .student-pill-carousel {display:flex;flex-direction:row!important;overflow:auto;max-height:150px!important;gap:8px;padding:6px;}
-.v3-teacher #tab-teacher-overview .student-pill-card {min-width:210px!important;width:240px!important;max-width:270px!important;flex:0 0 240px;}
-.v3-teacher #tab-teacher-overview .workspace-right-col {width:100%;border-radius:18px;background:var(--bg-card);overflow:hidden;border:1px solid var(--border);}
-.v3-teacher #tab-teacher-overview .workspace-search-wrap {max-width:520px;}
-.v3-teacher #tab-teacher-overview .workspace-left-footer {border-top:1px solid var(--border);}
-.v3-teacher #tab-teacher-overview .workspace-right-footer {background:var(--bg-muted);border-top:1px solid var(--border);}
-.v3-teacher #tab-teacher-overview .record-student-hero {padding:20px;display:flex;flex-wrap:wrap;gap:12px;background:var(--bg-muted);}
-.v3-teacher #tab-teacher-overview .record-hero-name {font-size:22px;}
-.v3-teacher #tab-teacher-overview .btn,.v3-teacher #tab-teacher-overview .btn-hero-take-action {border-radius:10px;min-height:40px;}
-.v3-teacher #tab-teacher-overview .btn-primary,.v3-teacher #tab-teacher-overview .btn-hero-take-action {background:#165a83;color:white;}
+.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) {color:var(--text-primary);}
+.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .dashboard-hero-section {background:none;padding:0;box-shadow:none;}
+.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .summary-header-card {display:flex;flex-wrap:wrap;gap:16px;padding:18px;background:var(--bg-card);border:1px solid var(--border);box-shadow:none;border-radius:16px;}
+.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .summary-header-left {display:flex;flex-wrap:wrap;gap:16px;flex:1;min-width:0;}
+.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .summary-pills-list {width:100%;display:flex;gap:10px;}
+.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .summary-status-pill {flex:1;padding:14px;font-size:16px;justify-content:center;border-radius:12px;white-space:normal;}
+.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .context-bar {margin:16px 0;background:var(--bg-card);box-shadow:none;}
+.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .workspace-two-col {display:flex;flex-direction:column;gap:16px;margin-top:18px;}
+.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .workspace-left-col {width:100%;padding:16px;max-height:none;border:1px solid var(--border);border-radius:16px;background:var(--bg-card);}
+.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .student-pill-carousel {display:flex;flex-direction:row!important;overflow:auto;max-height:150px!important;gap:8px;padding:6px;}
+.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .student-pill-card {min-width:210px!important;width:240px!important;max-width:270px!important;flex:0 0 240px;}
+.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .workspace-right-col {width:100%;border-radius:18px;background:var(--bg-card);overflow:hidden;border:1px solid var(--border);}
+.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .workspace-search-wrap {max-width:520px;}
+.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .workspace-left-footer {border-top:1px solid var(--border);}
+.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .workspace-right-footer {background:var(--bg-muted);border-top:1px solid var(--border);}
+.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .record-student-hero {padding:20px;display:flex;flex-wrap:wrap;gap:12px;background:var(--bg-muted);}
+.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .record-hero-name {font-size:22px;}
+.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .btn,.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .btn-hero-take-action {border-radius:10px;min-height:40px;}
+.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .btn-primary,.v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .btn-hero-take-action {background:#165a83;color:white;}
 .v3-teacher :focus-visible {outline:3px solid var(--text-primary);outline-offset:3px;}
 .v3-teacher #tab-teacher-students {max-width:1100px;}
 .v3-teacher #tab-teacher-students .choose-student {gap:18px;padding:24px;border:1px solid var(--border);border-radius:18px;background:var(--bg-card);box-shadow:0 8px 24px #17364d0a;}
@@ -91,15 +91,15 @@ html.dark .v3-teacher .class-info-title,
 html.dark .v3-teacher .summary-date-wrap,
 html.dark .v3-teacher .record-hero-name {color:var(--text-primary);}
 html.dark .v3-teacher .btn-secondary {background:var(--bg-muted);color:var(--text-primary);border-color:var(--border-strong);}
-html.dark .v3-teacher #tab-teacher-overview .student-pill-card {background:var(--bg-card)!important;border-color:var(--border-strong)!important;}
-html.dark .v3-teacher #tab-teacher-overview .student-pill-card:hover,
-html.dark .v3-teacher #tab-teacher-overview .student-pill-card.is-selected {background:var(--bg-muted)!important;}
+html.dark .v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .student-pill-card {background:var(--bg-card)!important;border-color:var(--border-strong)!important;}
+html.dark .v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .student-pill-card:hover,
+html.dark .v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .student-pill-card.is-selected {background:var(--bg-muted)!important;}
 
 html.dark .v3-teacher #app-shell {--c-present-row:#143324;--c-late-row:#382d16;--c-info-row:#172a3c;}
-html.dark .v3-teacher #tab-teacher-overview .student-pill-name,
+html.dark .v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .student-pill-name,
 html.dark .v3-teacher #hero-current-date,
 html.dark .v3-teacher #tab-teacher-care-alerts .summary-value {color:var(--text-primary)!important;}
-html.dark .v3-teacher #tab-teacher-overview .student-pill-meta {color:var(--text-secondary)!important;}
+html.dark .v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .student-pill-meta {color:var(--text-secondary)!important;}
 .v3-teacher .student-directory {padding:24px;margin-bottom:24px;background:var(--bg-card);border:1px solid var(--border);border-radius:18px;}
 .v3-teacher .directory-filters {display:flex;flex-wrap:wrap;gap:16px;margin:20px 0;}
 .v3-teacher .directory-filters label {display:grid;gap:8px;flex:1;min-width:200px;color:var(--text-secondary);}
@@ -107,3 +107,5 @@ html.dark .v3-teacher #tab-teacher-overview .student-pill-meta {color:var(--text
 .v3-teacher .directory-row {display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 4px;border-top:1px solid var(--border);}
 .v3-teacher .directory-row span {display:block;color:var(--text-secondary);font-size:13px;margin-top:5px;}
 .v3-teacher .directory-filters input,.v3-teacher .directory-filters select {width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--border-strong);border-radius:10px;background:var(--bg-input);color:var(--text-primary);}
+
+.v3-teacher #directory-record-mount {margin-top:16px;}

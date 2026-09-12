@@ -30,6 +30,10 @@ async function until(fn, message) {
       const db = context.firestore();
       for (const [role,identity] of Object.entries(identities)) await setDoc(doc(db,'users',identity.uid),{role, email:identity.email,first_name:'Fixture',last_name:role,section:'Grade 5-A',assigned_sections:role==='teacher'?['Grade 5-A']:[],pending_approval:false,enrollment_status:'enrolled',student_id:role==='student'?'TEST-001':''});
       for(let i=2;i<=30;i++) await setDoc(doc(db,'users','visual-student-'+i),{role:'student',first_name:'Sample',last_name:'Student '+i,section:'Grade 5-A',pending_approval:false,enrollment_status:'enrolled',student_id:'VIS-'+i});
+      await setDoc(doc(db,'users','other-class-student'),{role:'student',first_name:'Other Class',last_name:'Student',section:'Grade 6-B',student_id:'CROSS-001',pending_approval:false,enrollment_status:'enrolled'});
+      const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+      await setDoc(doc(db,'summativeScores','cross-score'),{studentId:'other-class-student',teacherId:identities.teacher.uid,assessmentId:'cross-assessment',score:8,maxScore:10,thresholdPercent:75,subject:'Math',assessmentDate:today,section:'Grade 6-B'});
+      await setDoc(doc(db,'emotional_checkins','cross-response'),{student_uid:'other-class-student',date:today,mood:'Okay',stress:'A little stressed',need:'Rest',recorded_via:'qr_scanner',is_negative:false});
       await setDoc(doc(db,'settings','global'),{morning_start:'07:30',morning_late_cutoff:'07:45',enrollment_open:false});
     });
     browser = await chromium.launch({channel:'msedge',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
@@ -83,14 +87,30 @@ async function until(fn, message) {
     const logo=await page.locator('.classcare-brand-icon').evaluate(async node=>{const src=getComputedStyle(node).backgroundImage.match(/url\(["']?(.*?)["']?\)/)[1];const image=new Image();image.src=src;await image.decode();return image.naturalWidth;});
     assert.ok(logo>0,'Brand asset decodes');
     await page.locator('.classcare-nav-links a[href="#teacher-students"]').click();
-    await page.waitForFunction(()=>document.querySelectorAll('[data-directory-review]').length===30);
+    await page.waitForFunction(()=>document.querySelectorAll('[data-directory-review]').length===31);
+    await page.locator('#directory-section').selectOption('Grade 6-B');
+    assert.equal(await page.locator('[data-directory-review]').count(),1);
+    await page.locator('[data-directory-review]').click();
+    await page.waitForFunction(()=>document.querySelector('#record-student-subtitle').textContent.includes('CROSS-001'));
+    await page.waitForFunction(()=>document.querySelector('#metric-score-late').textContent==='80.0');
+    await page.waitForFunction(()=>document.querySelector('#metric-support-late').textContent.includes('Okay · A little stressed · Rest'));
+    assert.equal(await page.locator('#directory-record-mount #student-record-panel').count(),1);
+    await page.locator('#directory-back').click();
+    await page.locator('#directory-section').selectOption('');
     await page.locator('#directory-search').fill('VIS-30');
     assert.equal(await page.locator('[data-directory-review]').count(),1);
     await page.locator('[data-directory-review]').press('Enter');
-    await page.locator('#tab-teacher-overview').waitFor({state:'visible'});
+    await page.locator('#directory-detail').waitFor({state:'visible'});
     assert.match(await page.locator('#record-card-title').textContent(),/Sample Student 30/);
     assert.equal(await page.locator('#record-card-title').evaluate(node=>node===document.activeElement),true);
-    await page.locator('.classcare-nav-links a[href="#teacher-students"]').click();
+    assert.equal(await page.locator('#student-record-panel').count(),1,'Record view is moved, not duplicated');
+    assert.equal(await page.locator('#metric-score-late-meta').textContent(),'Not recorded');
+    await page.screenshot({path:'test-results/integration/student-detail.png'});
+    await page.evaluate(()=>Theme.toggle());
+    await page.screenshot({path:'test-results/integration/student-detail-alternate-theme.png'});
+    await page.evaluate(()=>Theme.toggle());
+    await page.locator('#directory-back').click();
+    assert.equal(await page.locator('#directory-search').evaluate(node=>node===document.activeElement),true);
     assert.equal(await page.locator('#directory-search').inputValue(),'VIS-30');
     await page.locator('#directory-search').fill('no-such-student');
     assert.equal(await page.locator('[data-directory-review]').count(),0);
@@ -105,6 +125,11 @@ async function until(fn, message) {
         await page.locator('.classcare-nav-links a[href="#teacher-'+route+'"]').click();
         const panel=page.locator('#tab-teacher-'+route);
         await panel.waitFor({state:'visible'});
+        if(route==='attendance') {
+          const columns=await page.locator('#attendance-tbody').evaluate(body=>({headers:body.closest('table').querySelectorAll('thead th').length,cells:body.querySelector('tr').cells.length}));
+          assert.equal(columns.headers,8);
+          assert.equal(columns.cells,8);
+        }
         const contrast=await panel.locator('.card-title, .btn-secondary, .class-info-title, .record-hero-name, .identity-name, .student-pill-name, #hero-current-date, .summary-value').evaluateAll(nodes=>nodes.filter(n=>n.getBoundingClientRect().height).map(node=>{
           const rgb=value=>(value.match(/[\d.]+/g)||[]).slice(0,3).map(Number);
           const luminance=values=>values.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;}).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
