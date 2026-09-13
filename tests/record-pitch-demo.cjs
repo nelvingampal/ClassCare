@@ -41,7 +41,7 @@ const email='pitch-teacher@classcare.test',password='ClassCareDemo2026!';
  const page=await ctx.newPage();await page.goto(base+'/teacher/index.html');await page.locator('#view-dashboard').waitFor({state:'visible'});
  await page.evaluate(()=>{if(Theme.get()!=='light')Theme.toggle();});
  await page.waitForFunction(()=>document.getElementById('pill-stat-total').textContent.includes('30'));
- await page.waitForFunction(()=>document.getElementById('overview-care-status').textContent.startsWith('1 holistic'),{},{timeout:30000});
+ await page.waitForFunction(()=>document.getElementById('overview-care-status').textContent.startsWith('1 holistic'),{},{timeout:60000});
 await page.waitForFunction(()=>document.getElementById('pill-stat-late').textContent==='3 late');
  await page.screenshot({path:path.join(output,'assets/verified-overview.png'),clip:{x:260,y:20,width:1140,height:610}});
  await page.evaluate(()=>{const label=document.createElement('div');label.textContent='RECORDED LOCAL DEMONSTRATION • FICTIONAL RECORDS • NO OUTBOUND NOTIFICATIONS';Object.assign(label.style,{position:'fixed',bottom:'0',left:'232px',right:'0',background:'#17364d',color:'white',padding:'12px',font:'bold 14px Arial',textAlign:'center',zIndex:99999});document.body.append(label);});
