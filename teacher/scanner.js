@@ -949,10 +949,6 @@
     }
     const topCount = $("#topstat-alerts-count");
     if (topCount) topCount.textContent = String(count);
-    const overviewStatus = $("#overview-care-status");
-    const overviewDetail = $("#overview-care-status-detail");
-    if (overviewStatus) overviewStatus.textContent = count ? `${count} care alert${count === 1 ? "" : "s"} need review` : "No active care alerts";
-    if (overviewDetail) overviewDetail.textContent = count ? "Open Care Alerts to review the evidence and available actions." : "Open Care Alerts to review confirmed records and student requests.";
   }
 
   function renderInterventionPanel(alerts) {

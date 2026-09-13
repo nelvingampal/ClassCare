@@ -11,6 +11,12 @@
     if (!host) return null;
     root = node('section', null, 'cc-card'); root.id = 'holistic-live'; root.append(node('h2', title)); host.prepend(root); return root;
   }
+  function syncOverviewStatus(title, detail) {
+    const status = document.getElementById('overview-care-status');
+    const copy = document.getElementById('overview-care-status-detail');
+    if (status) status.textContent = title;
+    if (copy) copy.textContent = detail;
+  }
   function studentView(user) {
     const card = mount('Assessment schedule'); if (!card) return;
     const state = node('p', 'Connecting…', 'cc-live'), list = node('div'); card.append(state, list);
@@ -35,8 +41,10 @@
     function render() {
       const students = names(); list.replaceChildren();
       const rows = (data.alerts || []).filter(a => a.status !== 'Resolved');
-      const openCount = rows.filter(a => a.status === 'Open').length;
-      const totalCount = rows.length;
+      syncOverviewStatus(
+        rows.length ? `${rows.length} holistic care alert${rows.length === 1 ? '' : 's'} need review` : 'No active holistic care alerts',
+        rows.length ? 'Open Care Alerts to review the evidence and available actions.' : 'Open Care Alerts to review confirmed records and student requests.'
+      );
 
       // Dispatch live data for listeners without clobbering teacher scanner DOM elements
 
@@ -90,11 +98,13 @@
         if (token !== generation) return;
         ready.set(name, !snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites);
         data[name] = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
-        state.textContent = [...ready.values()].every(Boolean) ? 'Live · correlation listener active in this staff session' : 'Waiting for confirmed records; correlation paused';
+        const confirmed = [...ready.values()].every(Boolean);
+        state.textContent = confirmed ? 'Live · correlation listener active in this staff session' : 'Waiting for confirmed records; correlation paused';
+        if (!confirmed) syncOverviewStatus('Care alerts awaiting confirmed records', 'Open Care Alerts for the current connection status.');
         render();
         window.dispatchEvent(new CustomEvent('classcare:live-data', { detail: data }));
         if (affectsEngine) revision++; void evaluate();
-      }, error => { ready.set(name, false); state.textContent = `${name} unavailable: ${error.message}. Correlation paused.`; }));
+      }, error => { ready.set(name, false); state.textContent = `${name} unavailable: ${error.message}. Correlation paused.`; syncOverviewStatus('Care alerts unavailable', 'Reconnect before treating the current alert state as confirmed.'); }));
     };
     listen(ownScores, 'scores');
     const cutoff = H.schoolDate(new Date(Date.now() - 14 * 86400000));
