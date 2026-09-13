@@ -109,3 +109,9 @@ html.dark .v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .student-
 .v3-teacher .directory-filters input,.v3-teacher .directory-filters select {width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--border-strong);border-radius:10px;background:var(--bg-input);color:var(--text-primary);}
 
 .v3-teacher #directory-record-mount {margin-top:16px;}
+/* Public registration has one outer scroll area; the terms remain independently scrollable. */
+.v3-teacher #public-view .public-main {overflow-y:auto!important;align-items:flex-start!important;min-height:0;}
+.v3-teacher #public-view #view-guest {max-height:none!important;overflow:visible!important;margin-top:16px;margin-bottom:16px;flex-shrink:0;}
+.v3-teacher #public-view .auth-card {max-height:none!important;overflow:visible!important;}
+.v3-teacher .terms-block-header {flex-wrap:wrap;gap:12px;}
+.v3-teacher #teacher-terms-language {background:var(--bg-input);color:var(--text-primary);padding:8px;border:1px solid var(--border-strong);border-radius:8px;}
