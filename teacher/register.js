@@ -88,7 +88,7 @@
       termsRead = false; checkbox.checked = false; checkbox.disabled = true;
       checkboxRow.classList.remove('is-enabled'); hint.classList.remove('is-read');
       hint.textContent = fil ? 'Mag-scroll upang basahin' : 'Scroll to read';
-      scrollContainer.scrollTop = 0; syncRegisterButton();
+      scrollContainer.scrollTo({top:0,behavior:'instant'}); syncRegisterButton();
     });
 
     function syncRegisterButton() {

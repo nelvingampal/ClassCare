@@ -16,6 +16,7 @@ const assert=require('node:assert/strict');
  await box.check();
  assert.equal(await page.locator('#btn-teacher-register').isDisabled(),false);
  await page.locator('#teacher-terms-language').selectOption('en');
+ await page.waitForTimeout(500);
  assert.equal(await box.isChecked(),false);
  assert.equal(await box.isDisabled(),true);
  assert.equal(await page.locator('.terms-content h3').count(),17);
