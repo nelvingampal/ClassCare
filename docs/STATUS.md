@@ -1,5 +1,18 @@
 # ClassCare status — current checkpoint first
 
+## September 14 — desktop and pitch review package
+
+Completed the selected calmer desktop slice: compact next actions on Overview; native Scores and More tools navigation groups; existing routes, records and save workflows retained. User approved the heart-and-learners refinement, now installed in the teacher navigation. Previous brand assets remain preserved. Fixed singular care-alert status wording. No analytics, API or schema changes.
+
+PASS: 14 unit/reliability checks, 11 Firestore permissions checks, full synthetic browser workflow (including successful MediaPipe initialization on this rerun), and targeted integration at 1440x900 and 1280x800 in both themes. Final branding integration and the recorded local demonstration passed. The earlier gesture-model failure is historical; external model availability and physical recognition remain separate concerns. No physical-camera accuracy claim.
+
+The selected comparison and companion provenance were recovered from the frontend task. Companion remains separate from the logo and is not inserted into populated records. Mobile redesign remains deferred.
+
+Presentation workspace: C:/Users/Mico/Documents/ClassCare-Presentation. Claim alignment and sourced Q&A are in PITCH_ALIGNMENT_2026-09-14.md and PITCH_AND_QA_2026-09-14.md. Fictional demo account and launch instructions accompany the presentation package. Tests reset emulator fixtures; the final recording restores a full fictional class for preview.
+
+NOT RUN: physical laptop/camera/remote rehearsal, three timed spoken runs, production revision verification and school pilot. No push, merge or deployment. Poster is a review proof; official print dimensions remain unconfirmed. This is a local review checkpoint, not a declaration of school-use readiness.
+
+
 ## September 13 — audit regression repairs; design checkpoint still pending
 
 Fixed the care-summary confirmation race (cached or failed sources cannot report confirmed no alerts), restored the Overview class selector and retained its active value when options rebuild, removed the competing carousel from the rendered Students workspace, kept one explicitly opened record panel, and corrected the teacher-wellness bookmark to Care Alerts. Back hides record history; live updates refresh only the explicitly selected record. Existing persistence, permissions and analytics calculations are unchanged.

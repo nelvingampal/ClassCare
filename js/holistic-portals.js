@@ -44,7 +44,7 @@
       if (failures.size) syncOverviewStatus('Care alerts unavailable', 'Reconnect before treating the current alert state as confirmed.');
       else if (ready.size < 6 || ![...ready.values()].every(Boolean)) syncOverviewStatus('Care alerts awaiting confirmed records', 'Open Care Alerts for the current connection status.');
       else syncOverviewStatus(
-        rows.length ? `${rows.length} holistic care alert${rows.length === 1 ? '' : 's'} need review` : 'No active holistic care alerts',
+        rows.length ? `${rows.length} holistic care alert${rows.length === 1 ? ' needs' : 's need'} review` : 'No active holistic care alerts',
         rows.length ? 'Open Care Alerts to review the evidence and available actions.' : 'Open Care Alerts to review confirmed records and student requests.'
       );
 

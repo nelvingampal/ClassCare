@@ -2,7 +2,7 @@
 body.v3-teacher #app-shell {--v3-ink:var(--text-primary);--v3-muted:var(--text-secondary);--v3-sky:var(--c-primary-soft);color:var(--v3-ink);background:var(--bg-app)!important;}
 .v3-teacher #app-shell .classcare-topnav {position:fixed;inset:0 auto 0 0;width:232px;height:100vh;background:var(--c-primary-soft);border-right:1px solid var(--border);overflow-y:auto;}
 .v3-teacher .classcare-topnav-inner {height:auto;min-height:100%;padding:24px 16px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:24px;}
-.v3-teacher .classcare-brand-icon {width:44px;height:44px;flex:0 0 44px;background:#fff url('../assets/brand/svg/classcare-symbol-color.svg') center/34px 34px no-repeat;font-size:0;border:1px solid var(--border-strong);border-radius:12px;}
+.v3-teacher .classcare-brand-icon {width:44px;height:44px;flex:0 0 44px;background:#fff url('../assets/brand/heart-refinement/classcare-heart-learners-color.svg') center/34px 34px no-repeat;font-size:0;border:1px solid var(--border-strong);border-radius:12px;}
 .v3-teacher .classcare-brand-name {font-size:20px;letter-spacing:-.4px;}
 .v3-teacher .classcare-nav-links {display:flex;flex-direction:column;align-items:stretch;gap:6px;overflow:visible;}
 .v3-teacher .classcare-nav-item {display:flex;padding:13px 12px;border-radius:12px;white-space:normal;color:var(--text-primary);font-size:15px;min-height:44px;}
@@ -122,3 +122,26 @@ html.dark .v3-teacher :is(#tab-teacher-overview,#tab-teacher-students) .student-
 .v3-teacher #public-view .auth-card {max-height:none!important;overflow:visible!important;}
 .v3-teacher .terms-block-header {flex-wrap:wrap;gap:12px;}
 .v3-teacher #teacher-terms-language {background:var(--bg-input);color:var(--text-primary);padding:8px;border:1px solid var(--border-strong);border-radius:8px;}
+
+/* Approved calmer desktop hierarchy; shared controls keep their existing handlers. */
+.v3-teacher .calm-heading {margin:0 0 24px;}
+.v3-teacher .calm-heading h1 {font-size:32px;line-height:1.2;letter-spacing:-.8px;margin:0 0 10px;color:var(--text-primary);}
+.v3-teacher .calm-heading p {margin:0;color:var(--text-secondary);font-size:15px;}
+.v3-teacher .calm-nav-group summary {padding:13px 12px;min-height:44px;cursor:pointer;font-size:15px;font-weight:650;color:var(--text-primary);border-radius:12px;}
+.v3-teacher .calm-nav-group.has-active summary {background:var(--bg-card);}
+.v3-teacher .calm-nav-group .classcare-nav-item {margin-left:12px;padding:10px;font-size:13px;min-height:42px;}
+.v3-teacher .calm-nav-group .icon {width:16px;height:16px;flex-shrink:0;}
+.v3-teacher #tab-teacher-overview .dashboard-hero-section {gap:20px!important;}
+.v3-teacher #tab-teacher-overview .summary-header-card {padding:24px;box-shadow:0 8px 24px #17364d08;}
+.v3-teacher #tab-teacher-overview .summary-header-card>.field-label {color:var(--text-secondary);}
+.v3-teacher #tab-teacher-overview #section-select {min-height:44px;min-width:150px;}
+.v3-teacher .calm-next-grid {display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:20px;}
+.v3-teacher .calm-next-actions {background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:24px;}
+.v3-teacher .calm-next-actions h2 {font-size:20px;margin:0 0 16px;}
+.v3-teacher .calm-next-actions a {display:grid;gap:6px;padding:14px 0;color:var(--text-primary);text-decoration:none;border-top:1px solid var(--border);}
+.v3-teacher .calm-next-actions a span {color:var(--text-secondary);font-size:13px;}
+.v3-teacher .calm-next-actions a:hover strong {text-decoration:underline;}
+.v3-teacher .calm-next-grid .overview-care-status {margin:0;flex-direction:column;align-items:flex-start;justify-content:space-between;padding:24px;border-radius:18px;}
+.v3-teacher .overview-care-status strong {font-size:18px;line-height:1.4;}
+.v3-teacher .overview-care-status span {line-height:1.5;}
+@media(max-width:820px){.v3-teacher .calm-next-grid{grid-template-columns:1fr;}}

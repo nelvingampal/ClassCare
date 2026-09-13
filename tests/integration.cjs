@@ -61,10 +61,12 @@ async function until(fn, message) {
     const teacher=await context('teacher'), page=teacher.page;
     await page.goto(base+'/teacher/index.html');
     await page.locator('#view-dashboard').waitFor({state:'visible'});
+    assert.equal(await page.locator('#nav-scores-group a').count(),2);
+    assert.equal(await page.locator('#nav-tools-group a').count(),3);
     const routes={'teacher-overview':'tab-teacher-overview','teacher-students':'tab-teacher-students','teacher-attendance':'tab-teacher-attendance','teacher-register':'tab-teacher-attendance','teacher-summative':'tab-teacher-summative','teacher-grades':'tab-teacher-grades','teacher-care-alerts':'tab-teacher-care-alerts','teacher-enrollment':'tab-teacher-enrollment','teacher-assignments':'tab-teacher-assignments','teacher-analytics':'tab-teacher-analytics'};
     for(const [hash,id] of Object.entries(routes)){
       const link=page.locator('.classcare-nav-links a[href="#'+hash+'"]');
-      if(await link.count()) await link.click(); else await page.evaluate(hash=>{location.hash=hash;},hash);
+      if(await link.count()) { await link.evaluate(a=>{const group=a.closest('details');if(group)group.open=true;}); await link.click(); } else await page.evaluate(hash=>{location.hash=hash;},hash);
       await page.locator('#'+id).waitFor({state:'visible'});
       console.log('PASS route '+hash);
     }
@@ -83,7 +85,7 @@ async function until(fn, message) {
     await page.locator('#holistic-live').waitFor({state:'visible'});
     assert.equal(await page.locator('#holistic-live').evaluate(node=>node.parentElement?.id),'teacher-care-alerts');
     assert.equal(await page.locator('#holistic-live').isVisible(),true);
-    assert.equal(await page.locator('.classcare-brand-icon').evaluate(node=>getComputedStyle(node).backgroundImage.includes('classcare-symbol-color.svg')),true);
+    assert.equal(await page.locator('.classcare-brand-icon').evaluate(node=>getComputedStyle(node).backgroundImage.includes('classcare-heart-learners-color.svg')),true);
     fs.mkdirSync('test-results/integration',{recursive:true});
     await page.setViewportSize({width:1440,height:1000});
     await page.evaluate(()=>{location.hash='teacher-wellness';});
@@ -128,6 +130,7 @@ async function until(fn, message) {
     for(const theme of ['light','dark']) {
       await page.evaluate(theme=>{if(Theme.get()!==theme)Theme.toggle();},theme);
       for(const route of ['overview','students','attendance','summative','grades','care-alerts']) {
+        await page.locator('.classcare-nav-links a[href="#teacher-'+route+'"]').evaluate(a=>{const group=a.closest('details');if(group)group.open=true;});
         await page.locator('.classcare-nav-links a[href="#teacher-'+route+'"]').click();
         const panel=page.locator('#tab-teacher-'+route);
         await panel.waitFor({state:'visible'});

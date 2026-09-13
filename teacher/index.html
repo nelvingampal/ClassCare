@@ -420,6 +420,7 @@
         <section id="view-dashboard" class="section-stack hidden" aria-labelledby="teacher-page-title">
           <!-- TAB 1: OVERVIEW -->
           <div id="tab-teacher-overview" class="teacher-tab-panel">
+            <header class="calm-heading"><h1>Your classroom, today.</h1><p>Start with attendance. Open a student record when you need the detail.</p></header>
             <div class="dashboard-hero-section">
             
             <!-- SECTION 1: GLOBAL SUMMARY HEADER CARD (WHITE CARD, ROUNDED-2XL) -->
@@ -470,6 +471,12 @@
               </div>
             </section>
 
+            <div class="calm-next-grid">
+            <section class="calm-next-actions" aria-label="Next steps">
+              <h2>Continue your class work</h2>
+              <a href="#teacher-students"><strong>Find a student record</strong><span>Review dated attendance, scores and voluntary responses.</span></a>
+              <a href="#teacher-grades"><strong>Open term grades</strong><span>Choose a class and review its term records.</span></a>
+            </section>
             <section class="overview-care-status" aria-label="Care alert status">
               <div>
                 <strong id="overview-care-status">Care alerts are reviewed separately.</strong>
@@ -477,6 +484,7 @@
               </div>
               <a href="#teacher-care-alerts" class="btn btn-secondary">Open Care Alerts</a>
             </section>
+            </div>
 
             <!-- SECTION 2 & 3: TWO-COLUMN MAIN WORKSPACE -->
             <div class="workspace-two-col">
@@ -1464,8 +1472,20 @@
       if (!overview || !attendance || !students || !care || overview.dataset.arranged === "true") return;
       overview.dataset.arranged = "true";
 
-      // The shared top strip duplicated actions already available in their destinations.
-      document.querySelector("#view-dashboard > .cc-banner")?.remove();
+      const nav = document.querySelector(".classcare-nav-links");
+      const groupLinks = (id, label, ids) => {
+        const group = document.createElement("details"); group.id = id; group.className = "calm-nav-group";
+        const summary = document.createElement("summary"); summary.textContent = label; group.append(summary);
+        const first = document.getElementById(ids[0]); first.before(group);
+        ids.forEach(linkId => group.append(document.getElementById(linkId)));
+      };
+      if (nav) {
+        nav.insertBefore(document.getElementById("nav-teacher-students"), document.getElementById("nav-teacher-attendance"));
+        groupLinks("nav-scores-group", "Scores", ["nav-teacher-grades", "nav-teacher-summative"]);
+        document.querySelector("#nav-teacher-grades span").textContent = "Term grades";
+        document.querySelector("#nav-teacher-summative span").textContent = "Summative assessments";
+        groupLinks("nav-tools-group", "More tools", ["nav-teacher-enrollment", "nav-teacher-assignments", "nav-teacher-analytics"]);
+      }
 
       const contextBar = overview.querySelector(":scope > .context-bar");
       if (contextBar) {
@@ -1541,7 +1561,10 @@
           const href = item.getAttribute("href");
           const isMatch = (TAB_ROUTES[href] === targetTabId);
           item.classList.toggle("active", isMatch);
+          if (isMatch) item.setAttribute("aria-current", "page"); else item.removeAttribute("aria-current");
+          if (isMatch && item.closest("details")) item.closest("details").open = true;
         });
+        document.querySelectorAll(".calm-nav-group").forEach(group => group.classList.toggle("has-active", !!group.querySelector(".active")));
 
         // The teacher workspace scrolls inside .app-content; reset both scroll containers
         // so a route change always starts at the destination's heading.
