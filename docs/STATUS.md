@@ -2,7 +2,7 @@
 
 ## September 14 — desktop and pitch review package
 
-Completed the selected calmer desktop slice: compact next actions on Overview; native Scores and More tools navigation groups; existing routes, records and save workflows retained. User approved the heart-and-learners refinement, now installed in the teacher navigation. Previous brand assets remain preserved. Fixed singular care-alert status wording. No analytics, API or schema changes.
+Completed the selected calmer desktop slice: compact next actions on Overview; native Scores and More tools navigation groups; existing routes, records and save workflows retained. User approved the heart-and-learners refinement, now installed across shared public, student, admin and teacher branding. Previous brand assets remain preserved, and the approved asset is included in the service-worker shell. Fixed singular care-alert status wording. No analytics, API or schema changes.
 
 PASS: 14 unit/reliability checks, 11 Firestore permissions checks, full synthetic browser workflow (including successful MediaPipe initialization on this rerun), and targeted integration at 1440x900 and 1280x800 in both themes. Final branding integration and the recorded local demonstration passed. The earlier gesture-model failure is historical; external model availability and physical recognition remain separate concerns. No physical-camera accuracy claim.
 

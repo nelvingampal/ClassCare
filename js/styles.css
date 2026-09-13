@@ -305,10 +305,11 @@ html.dark .public-header {
   display: grid;
   place-items: center;
   border-radius: var(--radius-sm);
-  color: #fff;
-  background: linear-gradient(135deg, #258BF5 0%, #0A4479 100%);
-  box-shadow: 0 4px 12px rgba(37, 139, 245, 0.28);
-  font-size: 18px;
+  color: transparent;
+  background: #fff url('../assets/brand/heart-refinement/classcare-heart-learners-color.svg') center/contain no-repeat;
+  border: 1px solid rgba(22, 90, 131, 0.14);
+  box-shadow: 0 4px 12px rgba(22, 90, 131, 0.14);
+  font-size: 0;
   font-weight: 850;
   letter-spacing: -0.02em;
 }
@@ -1334,9 +1335,10 @@ html.dark .tabs { background: #121D2B; }
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: var(--c-primary-muted); /* #258BF5 */
-  color: #ffffff;
-  font-size: 24px;
+  background: #fff url('../assets/brand/heart-refinement/classcare-heart-learners-color.svg') center/contain no-repeat;
+  border: 1px solid rgba(22, 90, 131, 0.14);
+  color: transparent;
+  font-size: 0;
   font-weight: 900;
   display: grid;
   place-items: center;
@@ -3609,9 +3611,10 @@ button, .btn, .nav-link, .tab-btn, .secondary-tab-btn, select, input, textarea {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: #2563EB;
-  color: #FFFFFF;
-  font-size: 18px;
+  background: #fff url('../assets/brand/heart-refinement/classcare-heart-learners-color.svg') center/contain no-repeat;
+  border: 1px solid rgba(22, 90, 131, 0.14);
+  color: transparent;
+  font-size: 0;
   font-weight: 900;
   display: flex;
   align-items: center;
