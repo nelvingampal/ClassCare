@@ -1,5 +1,11 @@
 # ClassCare status — current checkpoint first
 
+## September 13 — calmer teacher workspace hierarchy
+
+The integrated teacher Overview now answers class context, today’s attendance status and the next action before showing supporting detail. The duplicate teacher-tools strip was removed; the existing context/report controls moved to Attendance; the existing roster and single student record renderer moved to Students; and detailed holistic monitoring mounts under Care Alerts. A concise Overview care status links to that destination. Approved data sources, handlers, permissions and save workflows remain unchanged. The Reports hash route now resolves to Attendance.
+
+PASS: unit/reliability checks, 11 Firestore rules tests, full synthetic browser workflow and targeted integration. Integration checks include no individual record on Overview, one shared record renderer in Students, Care Alerts placement, route reachability and Overview summary fit at 1440×900 and 1280×800. Mobile redesign remains deferred. The isolated frontend comparison task exhausted its model usage before producing a new artifact; this slice uses the previously approved V3 information architecture and written integration specification.
+
 ## September 13 — class access and focused detail verified
 Dashboard/scanner roster loading now follows approved all-class staff access; class selection is a view filter. Students detail stays inside Students using the existing single record panel; Back restores directory focus and Overview placement. Missing-score fallback, duplicate attendance headers and outdated daily check-in copy corrected. See CLASS_ACCESS_AND_DETAIL.md for scope and limits.
 

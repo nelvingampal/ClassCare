@@ -418,7 +418,6 @@
     <div class="app-main">
       <main class="app-content">
         <section id="view-dashboard" class="section-stack hidden" aria-labelledby="teacher-page-title">
-<div class="cc-banner"><nav class="cc-links" aria-label="Teacher tools"><a class="btn btn-secondary" href="index.html">Teacher portal</a><a class="btn btn-secondary" href="scanner.html">Daily Attendance</a><a class="btn btn-secondary" href="deep-check.html">Deep Emotional Check</a><a class="btn btn-secondary" href="summative.html">Summative Scores</a></nav></div>
           <!-- TAB 1: OVERVIEW -->
           <div id="tab-teacher-overview" class="teacher-tab-panel">
             <div class="dashboard-hero-section">
@@ -469,6 +468,14 @@
                   <span>Take attendance</span>
                 </a>
               </div>
+            </section>
+
+            <section class="overview-care-status" aria-label="Care alert status">
+              <div>
+                <strong id="overview-care-status">Care alerts are reviewed separately.</strong>
+                <span id="overview-care-status-detail">Open Care Alerts to review confirmed records and student requests.</span>
+              </div>
+              <a href="#teacher-care-alerts" class="btn btn-secondary">Open Care Alerts</a>
             </section>
 
             <!-- SECTION 2 & 3: TWO-COLUMN MAIN WORKSPACE -->
@@ -1447,8 +1454,34 @@
     </div>
   </div>
   <script>
+    // Keep Overview focused on today's decision; relocate existing controls without
+    // duplicating IDs or changing their handlers and data sources.
+    function arrangeTeacherWorkspace() {
+      const overview = document.getElementById("tab-teacher-overview");
+      const attendance = document.getElementById("tab-teacher-attendance");
+      const students = document.getElementById("tab-teacher-students");
+      const care = document.getElementById("tab-teacher-care-alerts");
+      if (!overview || !attendance || !students || !care || overview.dataset.arranged === "true") return;
+      overview.dataset.arranged = "true";
+
+      // The shared top strip duplicated actions already available in their destinations.
+      document.querySelector("#view-dashboard > .cc-banner")?.remove();
+
+      const contextBar = overview.querySelector(":scope > .context-bar");
+      if (contextBar) attendance.prepend(contextBar);
+
+      const wellness = overview.querySelector(":scope > #teacher-wellness");
+      const careSection = care.querySelector("#teacher-care-alerts");
+      if (wellness && careSection) careSection.append(wellness);
+
+      const workspace = overview.querySelector(":scope > .dashboard-hero-section > .workspace-two-col");
+      const studentPicker = students.querySelector("#choose-student");
+      if (workspace && studentPicker) studentPicker.before(workspace);
+    }
+
     // Pure frontend workspace dynamic synchronization & search
     document.addEventListener("DOMContentLoaded", () => {
+      arrangeTeacherWorkspace();
       // 1. Tab Navigation & Dynamic View Switching
       const TAB_ROUTES = {
         "#teacher-overview": "tab-teacher-overview",
@@ -1459,6 +1492,7 @@
         "": "tab-teacher-overview",
         "#teacher-attendance": "tab-teacher-attendance",
         "#teacher-register": "tab-teacher-attendance",
+        "#teacher-reports": "tab-teacher-attendance",
         "#tab-teacher-attendance": "tab-teacher-attendance",
         "#teacher-students": "tab-teacher-students",
         "#choose-student": "tab-teacher-students",

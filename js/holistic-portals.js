@@ -7,7 +7,7 @@
   const node = (tag, text, className) => { const el = document.createElement(tag); if (text != null) el.textContent = text; if (className) el.className = className; return el; };
   function cleanup() { generation++; stops.forEach(stop => stop()); stops = []; clearInterval(timer); root?.remove(); root = null; }
   function mount(title) {
-    const host = document.getElementById('view-dashboard') || document.getElementById('summative-content');
+    const host = document.getElementById('teacher-care-alerts') || document.getElementById('summative-content') || document.getElementById('view-dashboard');
     if (!host) return null;
     root = node('section', null, 'cc-card'); root.id = 'holistic-live'; root.append(node('h2', title)); host.prepend(root); return root;
   }

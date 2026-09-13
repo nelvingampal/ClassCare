@@ -650,7 +650,7 @@
       const pageTitle = $("#teacher-page-title");
       if (pageTitle) pageTitle.textContent = State.section ? `Section ${State.section}` : "All Sections";
       const roomLabel = $("#teacher-room-label");
-      if (roomLabel) roomLabel.textContent = State.section ? `Section ${State.section}` : (State.teacher?.preferred_section || "Classroom");
+      if (roomLabel) roomLabel.textContent = State.section ? `Section ${State.section}` : "All classes";
       renderStats();
       renderAttendanceTable();
       renderEmotionReport();
@@ -949,6 +949,10 @@
     }
     const topCount = $("#topstat-alerts-count");
     if (topCount) topCount.textContent = String(count);
+    const overviewStatus = $("#overview-care-status");
+    const overviewDetail = $("#overview-care-status-detail");
+    if (overviewStatus) overviewStatus.textContent = count ? `${count} care alert${count === 1 ? "" : "s"} need review` : "No active care alerts";
+    if (overviewDetail) overviewDetail.textContent = count ? "Open Care Alerts to review the evidence and available actions." : "Open Care Alerts to review confirmed records and student requests.";
   }
 
   function renderInterventionPanel(alerts) {
@@ -2159,7 +2163,7 @@
     const pageTitle = $("#teacher-page-title");
     if (pageTitle) pageTitle.textContent = State.section ? `Section ${State.section}` : "All Sections";
     const roomLabel = $("#teacher-room-label");
-    if (roomLabel) roomLabel.textContent = State.section ? `Section ${State.section}` : (State.teacher?.preferred_section || "Classroom");
+    if (roomLabel) roomLabel.textContent = State.section ? `Section ${State.section}` : "All classes";
 
     renderAlertBadge();
     if (typeof renderDynamicReferenceHero === "function") {

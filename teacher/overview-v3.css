@@ -7,6 +7,11 @@ body.v3-teacher #app-shell {--v3-ink:var(--text-primary);--v3-muted:var(--text-s
 .v3-teacher .classcare-nav-links {display:flex;flex-direction:column;align-items:stretch;gap:6px;overflow:visible;}
 .v3-teacher .classcare-nav-item {display:flex;padding:13px 12px;border-radius:12px;white-space:normal;color:var(--text-primary);font-size:15px;min-height:44px;}
 .v3-teacher .classcare-nav-item.active {background:var(--bg-card);border:1px solid var(--border-strong);box-shadow:0 3px 12px #17364d0a;}
+.v3-teacher .overview-care-status {display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:16px;padding:16px 18px;border:1px solid var(--border);border-radius:14px;background:var(--bg-card);box-shadow:0 6px 18px #17364d0a;}
+.v3-teacher .overview-care-status > div {display:grid;gap:4px;min-width:0;}
+.v3-teacher .overview-care-status strong {color:var(--text-primary);font-size:15px;}
+.v3-teacher .overview-care-status span {color:var(--text-secondary);font-size:13px;}
+.v3-teacher .overview-care-status .btn {flex:0 0 auto;}
 .v3-teacher .classcare-user-profile {margin-top:auto;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-start;}
 .v3-teacher .classcare-profile-card {width:100%;min-width:0;}
 .v3-teacher #app-shell .app-main {margin-left:232px!important;width:calc(100% - 232px)!important;max-width:none!important;}
@@ -77,6 +82,8 @@ body.v3-teacher #app-shell {--v3-ink:var(--text-primary);--v3-muted:var(--text-s
 .v3-teacher #tab-teacher-care-alerts .secondary-tab-btn.active {color:var(--text-primary);border-bottom-color:var(--text-primary);}
 .v3-teacher #tab-teacher-care-alerts .data thead th {background:var(--c-primary-soft);color:var(--text-primary);border-bottom-color:var(--border-strong);}
 @media(max-width:820px){
+ .v3-teacher .overview-care-status {align-items:stretch;flex-direction:column;}
+ .v3-teacher .overview-care-status .btn {width:100%;}
  .v3-teacher #app-shell .classcare-topnav {position:static;width:100%;height:auto;}
  .v3-teacher .classcare-topnav-inner {padding:14px;gap:10px;}
  .v3-teacher .classcare-nav-links {flex-direction:row;flex-wrap:wrap;}

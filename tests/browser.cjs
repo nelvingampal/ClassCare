@@ -173,6 +173,7 @@ async function until(fn, message) {
     await page.screenshot({path:'test-results/deep-mobile.png',fullPage:true});
     await page.goto(base+'/teacher/index.html');
     await page.locator('#view-dashboard').waitFor({state:'visible'});
+    await page.locator('.classcare-nav-links a[href="#teacher-care-alerts"]').click();
     await page.locator('#holistic-live').waitFor({state:'visible'});
     await page.waitForTimeout(1000);
     const admin = await context('admin');

@@ -72,9 +72,14 @@ async function until(fn, message) {
     await page.waitForTimeout(300);
     assert.equal(await page.locator('#teacher-reports').isVisible(),true,'Reports remains accessible');
     await page.evaluate(()=>{location.hash='teacher-overview';});
+    await page.locator('#overview-care-status').waitFor({state:'visible'});
+    assert.equal(await page.locator('#tab-teacher-overview #student-record-panel').count(),0,'Overview does not render individual records');
+    await page.locator('.classcare-nav-links a[href="#teacher-students"]').click();
     await page.locator('#reference-student-carousel [data-student-uid]').first().waitFor();
     await page.waitForTimeout(500);
-    assert.equal(await page.locator('#holistic-live').evaluate(node=>node.parentElement?.id),'view-dashboard');
+    await page.locator('.classcare-nav-links a[href="#teacher-care-alerts"]').click();
+    await page.locator('#holistic-live').waitFor({state:'visible'});
+    assert.equal(await page.locator('#holistic-live').evaluate(node=>node.parentElement?.id),'teacher-care-alerts');
     assert.equal(await page.locator('#holistic-live').isVisible(),true);
     assert.equal(await page.locator('.classcare-brand-icon').evaluate(node=>getComputedStyle(node).backgroundImage.includes('classcare-symbol-color.svg')),true);
     console.log('OVERVIEW POSITION',await page.evaluate(()=>({bodyScroll:document.body.scrollTop,docScroll:document.documentElement.scrollTop,mainScroll:document.querySelector('.app-main')?.scrollTop,contentScroll:document.querySelector('.app-content')?.scrollTop,summary:document.querySelector('.summary-header-card')?.getBoundingClientRect().toJSON(),record:document.querySelector('.workspace-right-col')?.getBoundingClientRect().toJSON()})));
@@ -141,10 +146,17 @@ async function until(fn, message) {
         await page.screenshot({path:'test-results/integration/'+theme+'-'+route+'.png'});
       }
     }
+    await page.setViewportSize({width:1440,height:900});
+    await page.locator('.classcare-nav-links a[href="#teacher-overview"]').click();
+    const wideSummary = await page.locator('#tab-teacher-overview .summary-header-card').boundingBox();
+    assert.ok(wideSummary && wideSummary.y + wideSummary.height <= 900,'Overview summary fits 1440x900');
+    await page.setViewportSize({width:1280,height:800});
+    const compactSummary = await page.locator('#tab-teacher-overview .summary-header-card').boundingBox();
+    assert.ok(compactSummary && compactSummary.y + compactSummary.height <= 800,'Overview summary fits 1280x800');
+    console.log('PASS desktop navigation/Overview hierarchy at 1440x900 and 1280x800; care detail is on Care Alerts');
     await page.evaluate(()=>ClassCare.getFirebase().auth.signOut());
     await page.waitForFunction(()=>document.querySelectorAll('[data-directory-review]').length===0);
     assert.equal(await page.locator('#directory-search').inputValue(),'');
     assert.deepEqual(errors,[]);
-    console.log('PASS desktop navigation/Overview presentation slice; live care remains on Overview and secondary write actions were not exercised');
   } finally { await browser?.close(); await env?.cleanup(); server.kill(); }
 })().catch(error=>{console.error(error);process.exitCode=1;});
