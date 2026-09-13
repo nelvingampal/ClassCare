@@ -75,20 +75,19 @@ async function until(fn, message) {
     await page.locator('#overview-care-status').waitFor({state:'visible'});
     assert.equal(await page.locator('#tab-teacher-overview #student-record-panel').count(),0,'Overview does not render individual records');
     await page.locator('.classcare-nav-links a[href="#teacher-students"]').click();
-    await page.locator('#reference-student-carousel [data-student-uid]').first().waitFor();
+    await page.locator('[data-directory-review]').first().waitFor();
+    assert.equal(await page.locator('#student-record-panel').isVisible(),false,'No record before explicit selection');
+    assert.equal(await page.locator('#reference-student-carousel').count(),0,'One directory, no competing carousel');
     await page.waitForTimeout(500);
     await page.locator('.classcare-nav-links a[href="#teacher-care-alerts"]').click();
     await page.locator('#holistic-live').waitFor({state:'visible'});
     assert.equal(await page.locator('#holistic-live').evaluate(node=>node.parentElement?.id),'teacher-care-alerts');
     assert.equal(await page.locator('#holistic-live').isVisible(),true);
     assert.equal(await page.locator('.classcare-brand-icon').evaluate(node=>getComputedStyle(node).backgroundImage.includes('classcare-symbol-color.svg')),true);
-    console.log('OVERVIEW POSITION',await page.evaluate(()=>({bodyScroll:document.body.scrollTop,docScroll:document.documentElement.scrollTop,mainScroll:document.querySelector('.app-main')?.scrollTop,contentScroll:document.querySelector('.app-content')?.scrollTop,summary:document.querySelector('.summary-header-card')?.getBoundingClientRect().toJSON(),record:document.querySelector('.workspace-right-col')?.getBoundingClientRect().toJSON()})));
     fs.mkdirSync('test-results/integration',{recursive:true});
     await page.setViewportSize({width:1440,height:1000});
-    await page.waitForFunction(()=>document.querySelectorAll('#reference-student-carousel [data-student-uid]').length===30);
-    const geometry=await page.locator('#reference-student-carousel').evaluate(node=>({direction:getComputedStyle(node).flexDirection,height:node.getBoundingClientRect().height,card:node.querySelector('[data-student-uid]').getBoundingClientRect().height}));
-    assert.equal(geometry.direction,'row');
-    assert.ok(geometry.height<=150 && geometry.card<150,JSON.stringify(geometry));
+    await page.evaluate(()=>{location.hash='teacher-wellness';});
+    await page.locator('#teacher-wellness').waitFor({state:'visible'});
     const logo=await page.locator('.classcare-brand-icon').evaluate(async node=>{const src=getComputedStyle(node).backgroundImage.match(/url\(["']?(.*?)["']?\)/)[1];const image=new Image();image.src=src;await image.decode();return image.naturalWidth;});
     assert.ok(logo>0,'Brand asset decodes');
     await page.locator('.classcare-nav-links a[href="#teacher-students"]').click();
@@ -101,6 +100,7 @@ async function until(fn, message) {
     await page.waitForFunction(()=>document.querySelector('#metric-support-late').textContent.includes('Okay · A little stressed · Rest'));
     assert.equal(await page.locator('#directory-record-mount #student-record-panel').count(),1);
     await page.locator('#directory-back').click();
+    assert.equal(await page.locator('#student-record-panel').isVisible(),false,'Back closes student history');
     await page.locator('#directory-section').selectOption('');
     await page.locator('#directory-search').fill('VIS-30');
     assert.equal(await page.locator('[data-directory-review]').count(),1);
@@ -115,6 +115,7 @@ async function until(fn, message) {
     await page.screenshot({path:'test-results/integration/student-detail-alternate-theme.png'});
     await page.evaluate(()=>Theme.toggle());
     await page.locator('#directory-back').click();
+    assert.equal(await page.locator('#student-record-panel').isVisible(),false,'Back closes student history');
     assert.equal(await page.locator('#directory-search').evaluate(node=>node===document.activeElement),true);
     assert.equal(await page.locator('#directory-search').inputValue(),'VIS-30');
     await page.locator('#directory-search').fill('no-such-student');
@@ -153,6 +154,15 @@ async function until(fn, message) {
     await page.setViewportSize({width:1280,height:800});
     const compactSummary = await page.locator('#tab-teacher-overview .summary-header-card').boundingBox();
     assert.ok(compactSummary && compactSummary.y + compactSummary.height <= 800,'Overview summary fits 1280x800');
+    for (const size of [{width:1440,height:900},{width:1280,height:800}]) {
+      await page.setViewportSize(size);
+      const selector=page.locator('#tab-teacher-overview #section-select');
+      await selector.waitFor({state:'visible'});
+      const box=await selector.boundingBox();
+      assert.ok(box && box.y>=0 && box.y+box.height<=size.height,'Class selector visible above fold');
+      assert.equal(await selector.inputValue(),'Grade 5 A','Selector retains actual active section after population');
+      await page.screenshot({path:`test-results/integration/repaired-overview-${size.width}.png`});
+    }
     console.log('PASS desktop navigation/Overview hierarchy at 1440x900 and 1280x800; care detail is on Care Alerts');
     await page.evaluate(()=>ClassCare.getFirebase().auth.signOut());
     await page.waitForFunction(()=>document.querySelectorAll('[data-directory-review]').length===0);

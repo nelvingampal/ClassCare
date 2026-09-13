@@ -857,8 +857,9 @@
       sections = Array.from(new Set(Array.from(State.sections).map(sectionValue).filter(Boolean))).sort((a, b) => a.localeCompare(b));
     }
     const html = `<option value="">All classes</option>${sections.map(section => `<option value="${escapeAttr(section)}">${escapeHtml(section)}</option>`).join("")}`;
-    if (select) select.innerHTML = html;
-    if (kioskSelect) kioskSelect.innerHTML = html;
+    for (const control of [select, kioskSelect]) {
+      if (control) { control.innerHTML = html; control.value = State.section || ""; }
+    }
   }
   function studentsFiltered() {
     const query = String($("#search-student")?.value || "").trim().toLowerCase();
@@ -3542,6 +3543,7 @@
   let _referenceHeroSelectedUid = null;
   let recordHomeMarker = null;
   function restoreTeacherRecord() {
+    _referenceHeroSelectedUid = null;
     const panel = $("#student-record-panel");
     if (recordHomeMarker && panel) recordHomeMarker.after(panel);
     $("#directory-detail")?.classList.add('hidden');
@@ -3597,7 +3599,11 @@
   async function renderDynamicReferenceHero() {
     renderStudentDirectory();
     const carousel = $("#reference-student-carousel");
-    if (!carousel) return;
+    if (!carousel) {
+      const selected = State.students.get(_referenceHeroSelectedUid);
+      if (selected) updateRecordOverviewCard(selected);
+      return;
+    }
 
     const list = studentsFiltered();
     const students = list.length ? list : Array.from(State.students.values());

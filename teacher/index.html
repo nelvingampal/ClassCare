@@ -1468,15 +1468,20 @@
       document.querySelector("#view-dashboard > .cc-banner")?.remove();
 
       const contextBar = overview.querySelector(":scope > .context-bar");
-      if (contextBar) attendance.prepend(contextBar);
+      if (contextBar) {
+        const classControl = contextBar.querySelector("#section-select")?.parentElement;
+        if (classControl) overview.querySelector(".summary-header-card")?.prepend(classControl);
+        attendance.prepend(contextBar);
+      }
 
       const wellness = overview.querySelector(":scope > #teacher-wellness");
       const careSection = care.querySelector("#teacher-care-alerts");
       if (wellness && careSection) careSection.append(wellness);
 
       const workspace = overview.querySelector(":scope > .dashboard-hero-section > .workspace-two-col");
-      const studentPicker = students.querySelector("#choose-student");
-      if (workspace && studentPicker) studentPicker.before(workspace);
+      const record = workspace?.querySelector("#student-record-panel");
+      if (record) students.querySelector("#directory-record-mount")?.append(record);
+      workspace?.remove();
     }
 
     // Pure frontend workspace dynamic synchronization & search
@@ -1487,7 +1492,7 @@
         "#teacher-overview": "tab-teacher-overview",
         "#overview": "tab-teacher-overview",
         "#tab-teacher-overview": "tab-teacher-overview",
-        "#teacher-wellness": "tab-teacher-overview",
+        "#teacher-wellness": "tab-teacher-care-alerts",
         "#view-dashboard": "tab-teacher-overview",
         "": "tab-teacher-overview",
         "#teacher-attendance": "tab-teacher-attendance",

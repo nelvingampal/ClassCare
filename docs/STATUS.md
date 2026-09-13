@@ -1,5 +1,15 @@
 # ClassCare status — current checkpoint first
 
+## September 13 — audit regression repairs; design checkpoint still pending
+
+Fixed the care-summary confirmation race (cached or failed sources cannot report confirmed no alerts), restored the Overview class selector and retained its active value when options rebuild, removed the competing carousel from the rendered Students workspace, kept one explicitly opened record panel, and corrected the teacher-wellness bookmark to Care Alerts. Back hides record history; live updates refresh only the explicitly selected record. Existing persistence, permissions and analytics calculations are unchanged.
+
+PASS: 14 unit tests including the new listener-state regression; 11 Firestore permission tests; targeted synthetic integration covering directory selection/Back/focus, bookmark routing, both themes, and actual selector visibility at 1440x900 and 1280x800. Reviewed repaired Overview and Students screenshots under test-results/integration. Syntax and whitespace checks pass.
+
+FAIL: full browser suite stopped at MediaPipe gesture-model initialization ("Gesture model could not load"); preceding daily attendance, duplicate, failed time-out/retry and skipped-response checks passed. Remaining full-suite checks were NOT RUN after that failure. Gesture files were not changed by this slice; cause is not established and this is not a full regression pass.
+
+The previous hierarchy completion claim was premature. Scores/More tools grouping, companion verification and the isolated comparison remain pending. The existing frontend design task has been sent the missing comparison handoff again; no further styling integration before that checkpoint. Mobile refinement, equipment rehearsal and production deployment remain deferred. No push or deployment performed.
+
 ## September 13 — calmer teacher workspace hierarchy
 
 The integrated teacher Overview now answers class context, today’s attendance status and the next action before showing supporting detail. The duplicate teacher-tools strip was removed; the existing context/report controls moved to Attendance; the existing roster and single student record renderer moved to Students; and detailed holistic monitoring mounts under Care Alerts. A concise Overview care status links to that destination and reads only the same holistic care-alert stream, keeping legacy intervention counts separate. Approved data sources, handlers, permissions and save workflows remain unchanged. The Reports hash route now resolves to Attendance.

@@ -34,14 +34,16 @@
     const intro = node('p', 'Recent summative performance below its threshold, combined with a negative emotional flag in the last 14 days.');
     const state = node('p', 'Connecting…', 'cc-live'), list = node('div'); list.setAttribute('aria-live', 'polite');
     card.append(intro, state, list);
-    const token = generation, data = {}, ready = new Map(); let running = false, revision = 0, evaluated = -1;
+    const token = generation, data = {}, ready = new Map(), failures = new Set(); let running = false, revision = 0, evaluated = -1;
     const ownScores = db().collection('summativeScores').where('teacherId', '==', user.uid);
     const ownAlerts = db().collection('careAlerts').where('teacherId', '==', user.uid);
     const names = () => new Map((data.users || []).map(s => [s.id, `${s.first_name || ''} ${s.last_name || ''}`.trim() || s.student_id || 'Student']));
     function render() {
       const students = names(); list.replaceChildren();
       const rows = (data.alerts || []).filter(a => a.status !== 'Resolved');
-      syncOverviewStatus(
+      if (failures.size) syncOverviewStatus('Care alerts unavailable', 'Reconnect before treating the current alert state as confirmed.');
+      else if (ready.size < 6 || ![...ready.values()].every(Boolean)) syncOverviewStatus('Care alerts awaiting confirmed records', 'Open Care Alerts for the current connection status.');
+      else syncOverviewStatus(
         rows.length ? `${rows.length} holistic care alert${rows.length === 1 ? '' : 's'} need review` : 'No active holistic care alerts',
         rows.length ? 'Open Care Alerts to review the evidence and available actions.' : 'Open Care Alerts to review confirmed records and student requests.'
       );
@@ -96,15 +98,15 @@
       ready.set(name, false);
       stops.push(query.onSnapshot({ includeMetadataChanges: true }, snapshot => {
         if (token !== generation) return;
+        failures.delete(name);
         ready.set(name, !snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites);
         data[name] = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
         const confirmed = [...ready.values()].every(Boolean);
         state.textContent = confirmed ? 'Live · correlation listener active in this staff session' : 'Waiting for confirmed records; correlation paused';
-        if (!confirmed) syncOverviewStatus('Care alerts awaiting confirmed records', 'Open Care Alerts for the current connection status.');
         render();
         window.dispatchEvent(new CustomEvent('classcare:live-data', { detail: data }));
         if (affectsEngine) revision++; void evaluate();
-      }, error => { ready.set(name, false); state.textContent = `${name} unavailable: ${error.message}. Correlation paused.`; syncOverviewStatus('Care alerts unavailable', 'Reconnect before treating the current alert state as confirmed.'); }));
+      }, error => { if (token !== generation) return; failures.add(name); ready.set(name, false); state.textContent = `${name} unavailable: ${error.message}. Correlation paused.`; syncOverviewStatus('Care alerts unavailable', 'Reconnect before treating the current alert state as confirmed.'); }));
     };
     listen(ownScores, 'scores');
     const cutoff = H.schoolDate(new Date(Date.now() - 14 * 86400000));
