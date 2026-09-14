@@ -1,5 +1,13 @@
 # ClassCare status — current checkpoint first
 
+## September 14 — focused desktop care-loading repair
+
+Added the missing DB.careAlerts accessor used by the existing teacher listener. This restores its existing collection subscription without changing rules, alert thresholds or schemas. The holistic detail card now distinguishes pending/unavailable records from confirmed no alerts, matching Overview.
+
+PASS: nine focused unit tests (including detail-state assertions), JavaScript syntax, whitespace check, and tests/desktop-care.cjs across three consecutive desktop loads. The existing fictional Sam Santos alert remained confirmed after each load; one holistic card rendered; no teacher-care listener warnings or uncaught browser errors occurred. The desktop test requires the existing local pitch fixtures and blocks production/outbound endpoints.
+
+The earlier intermittent recording timeout did not recur during this targeted check; its complete cause is not established. No claim of universal connection reliability. Mobile work was neither changed nor tested. Physical equipment rehearsal, partner source reconciliation and deployment remain pending. Earlier recording/deck files were not regenerated in this repair pass.
+
 ## September 14 — desktop and pitch review package
 
 Completed the selected calmer desktop slice: compact next actions on Overview; native Scores and More tools navigation groups; existing routes, records and save workflows retained. User approved the heart-and-learners refinement, now installed across shared public, student, admin and teacher branding. Previous brand assets remain preserved, and the approved asset is included in the service-worker shell. Fixed singular care-alert status wording. No analytics, API or schema changes.

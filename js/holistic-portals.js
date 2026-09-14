@@ -50,7 +50,11 @@
 
       // Dispatch live data for listeners without clobbering teacher scanner DOM elements
 
-      if (!rows.length) list.append(node('p', 'No active holistic care alerts.'));
+      if (!rows.length) list.append(node('p', failures.size
+        ? 'Care alerts unavailable. Reconnect before checking for active alerts.'
+        : ready.size < 6 || ![...ready.values()].every(Boolean)
+          ? 'Waiting for confirmed records before checking for active alerts.'
+          : 'No active holistic care alerts.'));
       rows.forEach(alert => {
         const item = node('article', null, 'cc-alert');
         item.append(node('strong', `Intervention Needed: ${students.get(alert.studentId) || alert.studentName || 'Student'} has low performance and recent negative emotional flags.`));
@@ -106,7 +110,7 @@
         render();
         window.dispatchEvent(new CustomEvent('classcare:live-data', { detail: data }));
         if (affectsEngine) revision++; void evaluate();
-      }, error => { if (token !== generation) return; failures.add(name); ready.set(name, false); state.textContent = `${name} unavailable: ${error.message}. Correlation paused.`; syncOverviewStatus('Care alerts unavailable', 'Reconnect before treating the current alert state as confirmed.'); }));
+      }, error => { if (token !== generation) return; failures.add(name); ready.set(name, false); state.textContent = `${name} unavailable: ${error.message}. Correlation paused.`; render(); }));
     };
     listen(ownScores, 'scores');
     const cutoff = H.schoolDate(new Date(Date.now() - 14 * 86400000));
