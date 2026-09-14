@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "test": "node --test tests/*.test.cjs tests/*.test.mjs",
-    "test:rules": "firebase emulators:exec --only firestore --project demo-classcare \"node --test tests/firestore.rules.cjs\"",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-classcare \"node --test --test-concurrency=1 tests/firestore.rules.cjs tests/security.rules.cjs\"",
     "test:browser": "node tests/browser.cjs"
   },
   "devDependencies": {

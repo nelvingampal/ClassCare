@@ -137,6 +137,47 @@
     renderProfile(user);
   }
 
+  function isPendingStudent(user) {
+    return user?.role === "student" && user.pending_approval === true;
+  }
+
+  function showPendingApproval(user) {
+    showDashboard(user);
+    document.body.dataset.studentApproval = "pending";
+    document.querySelectorAll(".classcare-nav-item, .app-sidebar .nav-link").forEach(link => {
+      const href = link.getAttribute("href") || "";
+      const allowed = href === "#student-profile";
+      link.classList.toggle("hidden", !allowed);
+      link.setAttribute("aria-hidden", allowed ? "false" : "true");
+    });
+    document.querySelectorAll(".student-tab-panel").forEach(panel => panel.classList.add("hidden"));
+    $("#tab-student-profile")?.classList.remove("hidden");
+    document.querySelectorAll(".classcare-nav-item, .app-sidebar .nav-link").forEach(link => {
+      link.classList.toggle("active", (link.getAttribute("href") || "") === "#student-profile");
+    });
+    if (location.hash !== "#student-profile") history.replaceState(null, "", "#student-profile");
+    let notice = $("#student-pending-approval-notice");
+    if (!notice) {
+      notice = document.createElement("div");
+      notice.id = "student-pending-approval-notice";
+      notice.className = "state-panel state-info";
+      notice.style.marginBottom = "16px";
+      $("#view-dashboard")?.prepend(notice);
+    }
+    notice.innerHTML = "<strong>Account pending administrator approval</strong><span>Your account request was received. An administrator must verify your identity and assign your section before Student ID, attendance, check-in, enrollment, and concern tools become available.</span>";
+    const saveBtn = $("#btn-save-profile");
+    if (saveBtn) saveBtn.disabled = true;
+  }
+
+  function clearPendingApprovalState() {
+    document.body.dataset.studentApproval = "approved";
+    $("#student-pending-approval-notice")?.remove();
+    document.querySelectorAll(".classcare-nav-item, .app-sidebar .nav-link").forEach(link => {
+      link.classList.remove("hidden");
+      link.setAttribute("aria-hidden", "false");
+    });
+  }
+
   function authErrorMessage(error, action) {
     const code = String(error?.code || "");
     if (code.includes("configuration-not-found") || code.includes("operation-not-allowed")) return "Email/password sign-in is not enabled in Firebase yet.";
@@ -225,6 +266,7 @@
   setupTermsAndConditions();
 
   formRegister?.addEventListener("submit", async event => {
+    event.preventDefault();
     const termsCheckbox = $("#student-terms-checkbox");
     if (!termsCheckbox || !termsCheckbox.checked || termsCheckbox.disabled) {
       event.preventDefault();
@@ -285,14 +327,16 @@
         role: "student", student_id: Utils.sanitizeText(clean.student_id, { max: 20 }),
         section: "",
         grade_level: null,
-        enrollment_status: "not_enrolled",
+        enrollment_status: "pending",
+        pending_approval: true,
+        disabled: false,
         parent_name: Utils.sanitizeText(clean.parent_name || "", { max: 60 }),
         parent_contact: Utils.sanitizeTelegramUsername(clean.parent_contact),
         parent_email: String(clean.parent_email || "").trim().toLowerCase(),
         photo_data: photoData, created_at: firebase.firestore.FieldValue.serverTimestamp()
       });
       sessionStorage.removeItem(pendingKey);
-      Toast.success("Account created. Your Student ID is ready.");
+      Toast.success("Account request submitted. Please wait for administrator approval.");
     } catch (error) {
       console.error("[student-registration] failed:", error);
       if (!authUserCreated) sessionStorage.removeItem(pendingKey);
@@ -358,7 +402,9 @@
         student_id: Utils.sanitizeText(pending.student_id, { max: 20 }),
         section: pending.section || user.section || "",
         grade_level: pending.grade_level || user.grade_level || null,
-        enrollment_status: pending.enrollment_status || user.enrollment_status || "not_enrolled",
+        enrollment_status: pending.enrollment_status || user.enrollment_status || "pending",
+        pending_approval: true,
+        disabled: false,
         parent_name: Utils.sanitizeText(pending.parent_name || user.parent_name || "", { max: 60 }),
         parent_contact: Utils.sanitizeTelegramUsername(pending.parent_contact),
         parent_email: String(pending.parent_email || "").trim().toLowerCase(),
@@ -570,6 +616,7 @@
   $("#form-student-profile")?.addEventListener("submit", async event => {
     event.preventDefault();
     if (!currentUser?.uid) return Toast.error("Sign in first.");
+    if (!ClassCare.canProvisionProfiles()) return Toast.warn('Your profile is read-only. Ask administration to update your contact details.');
     const pName = Utils.sanitizeText($("#profile-parent-name")?.value || "", { max: 60 });
     const pEmail = String($("#profile-parent-email")?.value || "").trim().toLowerCase();
     const pContact = Utils.sanitizeTelegramUsername($("#profile-parent-contact")?.value);
@@ -636,6 +683,8 @@
     if (user.__profileError) return showGuest("Your ClassCare profile could not be read. Check your connection or ask the IT administrator to verify your access.");
     const repaired = await repairPendingStudentProfile(user);
     if (!roleGuard(repaired)) return;
+    if (isPendingStudent(repaired)) return showPendingApproval(repaired);
+    clearPendingApprovalState();
     showDashboard(repaired);
   });
 })();

@@ -28,12 +28,12 @@ async function until(fn, message) {
     }
     await env.withSecurityRulesDisabled(async context => {
       const db = context.firestore();
-      for (const [role,identity] of Object.entries(identities)) await setDoc(doc(db,'users',identity.uid),{role, email:identity.email,first_name:'Fixture',last_name:role,section:'Grade 5-A',assigned_sections:role==='teacher'?['Grade 5-A']:[],pending_approval:false,enrollment_status:'enrolled',student_id:role==='student'?'TEST-001':''});
+      for (const [role,identity] of Object.entries(identities)) await setDoc(doc(db,'users',identity.uid),{role, email:identity.email,first_name:'Fixture',last_name:role,section:'Grade 5-A',assigned_sections:role==='teacher'?['Grade 5-A','Grade 6-B']:[],pending_approval:false,enrollment_status:'enrolled',student_id:role==='student'?'TEST-001':''});
       for(let i=2;i<=30;i++) await setDoc(doc(db,'users','visual-student-'+i),{role:'student',first_name:'Sample',last_name:'Student '+i,section:'Grade 5-A',pending_approval:false,enrollment_status:'enrolled',student_id:'VIS-'+i});
       await setDoc(doc(db,'users','other-class-student'),{role:'student',first_name:'Other Class',last_name:'Student',section:'Grade 6-B',student_id:'CROSS-001',pending_approval:false,enrollment_status:'enrolled'});
       const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
       await setDoc(doc(db,'summativeScores','cross-score'),{studentId:'other-class-student',teacherId:identities.teacher.uid,assessmentId:'cross-assessment',score:8,maxScore:10,thresholdPercent:75,subject:'Math',assessmentDate:today,section:'Grade 6-B'});
-      await setDoc(doc(db,'emotional_checkins','cross-response'),{student_uid:'other-class-student',date:today,mood:'Okay',stress:'A little stressed',need:'Rest',recorded_via:'qr_scanner',is_negative:false});
+      await setDoc(doc(db,'emotional_checkins','cross-response'),{studentId:'other-class-student',student_uid:'other-class-student',section:'Grade 6-B',date:today,mood:'Okay',stress:'A little stressed',need:'Rest',recorded_via:'qr_scanner',is_negative:false});
       await setDoc(doc(db,'settings','global'),{morning_start:'07:30',morning_late_cutoff:'07:45',enrollment_open:false});
     });
     browser = await chromium.launch({channel:'msedge',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
@@ -42,9 +42,7 @@ async function until(fn, message) {
       const ctx = await browser.newContext({serviceWorkers:'block',ignoreHTTPSErrors:true,permissions:['camera'],viewport:{width:1280,height:900}});
       await ctx.route(/https:\/\/(?:firestore\.googleapis\.com|identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|api\.telegram\.org|api\.emailjs\.com|generativelanguage\.googleapis\.com)/, route => route.abort());
       await ctx.route('**/js/config.js', route => route.fulfill({contentType:'application/javascript',body:"window.CLASSCARE_CONFIG={firebase:{apiKey:'demo-key',projectId:'demo-classcare',authDomain:'demo-classcare.firebaseapp.com'}};"}));
-      await ctx.route('**/config/firebase-config.js', route => route.fulfill({contentType:'application/javascript',body:fs.readFileSync('config/firebase-config.js','utf8')
-        .replace('_auth = firebase.auth();', "_auth = firebase.auth(); _auth.useEmulator('http://127.0.0.1:9099',{disableWarnings:true});")
-        .replace('_db = firebase.firestore();', "_db = firebase.firestore(); _db.useEmulator('127.0.0.1',8080);")}));
+      await ctx.route('**/config/firebase-config.js', route => route.fulfill({contentType:'application/javascript',body:fs.readFileSync('config/firebase-config.js','utf8')}));
       const page = await ctx.newPage();
       page.setDefaultTimeout(20000);
       page.on('pageerror', e => { errors.push(`${role}: ${e.message}`); console.log('PAGE ERROR', role, e.message); });

@@ -724,6 +724,7 @@
     const cleanSecId = String(section || "").replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
 
     const payload = {
+      studentId: studentUid,
       student_uid: studentUid,
       student_id: studentId,
       student_name: studentName,

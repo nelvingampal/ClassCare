@@ -44,6 +44,7 @@
     settings: { school_start_time: "07:30", late_grace_period: 15, time_out_start: "15:00" }, scanner: null,
     scanning: false, transitioning: false, scanInFlight: false, generation: 0, unsubscribeAttendance: null, unsubscribeVibeCheck: null, bound: false,
     lastScanTs: 0, lastDuplicateAlertTs: 0, nextDayTimer: null, wellbeing: createWellbeingState(),
+    pendingKioskMood: null,
     intervention: {
       emotionCache: new Map(),   // studentUid -> {emotion, date}
       gradeCache: new Map(),     // studentUid -> {average, deped}
@@ -532,6 +533,13 @@
         };
       }
     } catch (_) {}
+
+    // Automatically start camera for daily attendance kiosk
+    setTimeout(() => {
+      if (!State.scanning && !State.transitioning && State.teacher) {
+        startScanner().catch(err => console.warn("[scanner] auto-start camera:", err));
+      }
+    }, 400);
   }
 
   function listenUsers(user, generation) {
@@ -717,7 +725,9 @@
       }
     });
     $("#btn-stop-scan")?.addEventListener("click", stopScanner);
+    $("#btn-quick-emotion-check")?.addEventListener("click", () => startPreScanEmotionCheck());
     $("#btn-flip-camera")?.addEventListener("click", toggleCameraMirror);
+    $("#btn-camera-focus")?.addEventListener("click", toggleCameraFocus);
     $("#btn-camera-zoom")?.addEventListener("click", toggleCameraZoom);
     $("#btn-camera-lighting")?.addEventListener("click", toggleCameraLighting);
     applyCameraMirrorState();
@@ -2300,6 +2310,8 @@
 
     let lastScanTs = 0;
     let frameStep = 0;
+    let lastAutoLightTs = 0;
+    let lastPeriodicFocusTs = 0;
 
     async function frameScan(now) {
       if (!State.scanning || !video || video.paused || video.ended) {
@@ -2316,6 +2328,40 @@
         const vh = video.videoHeight;
 
         if (vw >= 80 && vh >= 80) {
+          // Dynamic AGC (Real-time Auto-Adjust Lighting) every ~280ms when in 'auto' mode
+          if (currentLightingMode === "auto" && now - lastAutoLightTs >= 280) {
+            lastAutoLightTs = now;
+            try {
+              const sampleDim = 48;
+              scanOffscreenCanvas.width = sampleDim;
+              scanOffscreenCanvas.height = sampleDim;
+              scanOffscreenCtx.drawImage(video, Math.floor(vw * 0.25), Math.floor(vh * 0.25), Math.floor(vw * 0.5), Math.floor(vh * 0.5), 0, 0, sampleDim, sampleDim);
+              const sData = scanOffscreenCtx.getImageData(0, 0, sampleDim, sampleDim).data;
+              let sumLum = 0;
+              for (let i = 0; i < sData.length; i += 4) {
+                sumLum += (sData[i] * 77 + sData[i + 1] * 150 + sData[i + 2] * 29) >> 8;
+              }
+              const avgLum = sumLum / (sampleDim * sampleDim);
+              let targetB = 1.05, targetC = 1.15, targetS = 1.0, newState = "balanced";
+              if (avgLum < 88) {
+                newState = "boosted";
+                targetB = Math.min(1.42, 1.15 + (88 - avgLum) * 0.005);
+                targetC = 1.25;
+                targetS = 1.05;
+              } else if (avgLum > 185) {
+                newState = "anti-glare";
+                targetB = Math.max(0.82, 0.94 - (avgLum - 185) * 0.004);
+                targetC = 1.38;
+                targetS = 0.95;
+              }
+              video.style.filter = `brightness(${targetB.toFixed(2)}) contrast(${targetC.toFixed(2)}) saturate(${targetS.toFixed(2)})`;
+              if (newState !== dynamicLightState) {
+                dynamicLightState = newState;
+                updateCameraStatusBadge();
+              }
+            } catch (_) {}
+          }
+
           let detected = null;
 
           // 1. Hardware-accelerated BarcodeDetector (instant GPU processing)
@@ -2378,6 +2424,45 @@
               if (qr && qr.data) {
                 detected = qr.data;
               }
+            }
+
+            // Pass D: Sharpness Laplacian Filter (every 3rd frame: recovers soft, out-of-focus, or blurry QR cards)
+            if (!detected && frameStep % 3 === 0) {
+              scanOffscreenCanvas.width = targetDim;
+              scanOffscreenCanvas.height = targetDim;
+              scanOffscreenCtx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, targetDim, targetDim);
+              imgData = scanOffscreenCtx.getImageData(0, 0, targetDim, targetDim);
+              const d = imgData.data;
+              const copy = new Uint8ClampedArray(d);
+              const w = targetDim;
+              for (let y = 1; y < targetDim - 1; y++) {
+                for (let x = 1; x < targetDim - 1; x++) {
+                  const idx = (y * w + x) * 4;
+                  for (let c = 0; c < 3; c++) {
+                    const center = copy[idx + c];
+                    const up = copy[((y - 1) * w + x) * 4 + c];
+                    const down = copy[((y + 1) * w + x) * 4 + c];
+                    const left = copy[(y * w + (x - 1)) * 4 + c];
+                    const right = copy[(y * w + (x + 1)) * 4 + c];
+                    const sharp = center * 5 - (up + down + left + right);
+                    d[idx + c] = sharp < 0 ? 0 : sharp > 255 ? 255 : sharp;
+                  }
+                }
+              }
+              qr = window.jsQR(d, targetDim, targetDim, { inversionAttempts: "attemptBoth" });
+              if (qr && qr.data) {
+                detected = qr.data;
+              }
+            }
+          }
+
+          // Periodic gentle hardware auto-refocus every ~8 seconds if idle
+          if (!detected && now - lastPeriodicFocusTs >= 8000) {
+            lastPeriodicFocusTs = now;
+            const tr = State.activeVideoTrack;
+            const cp = State.activeTrackCapabilities;
+            if (tr && cp && cp.focusMode && cp.focusMode.includes("continuous")) {
+              tr.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});
             }
           }
 
@@ -2468,7 +2553,12 @@
           videoConstraints: {
             facingMode: "environment",
             width: { ideal: 1280, min: 640 },
-            height: { ideal: 720, min: 480 }
+            height: { ideal: 720, min: 480 },
+            advanced: [
+              { focusMode: "continuous" },
+              { exposureMode: "continuous" },
+              { whiteBalanceMode: "continuous" }
+            ]
           }
         },
         onDecodedQR,
@@ -2488,7 +2578,12 @@
             disableFlip: false,
             videoConstraints: {
               width: { ideal: 1280, min: 640 },
-              height: { ideal: 720, min: 480 }
+              height: { ideal: 720, min: 480 },
+              advanced: [
+                { focusMode: "continuous" },
+                { exposureMode: "continuous" },
+                { whiteBalanceMode: "continuous" }
+              ]
             }
           },
           onDecodedQR,
@@ -2619,99 +2714,142 @@
     }
   }
 
-  async function applyNativeCameraEnhancements() {
-    const video = document.querySelector("#scanner-root video");
-    if (!video) return;
-    const stream = video.srcObject;
-    if (!stream) return;
-    const track = stream.getVideoTracks()[0];
-    if (!track) return;
+  let currentZoom = 1.0;
+  let currentLightingMode = "auto";
+  let dynamicLightState = "balanced";
 
-    try {
-      const capabilities = typeof track.getCapabilities === "function" ? track.getCapabilities() : {};
-      const settings = typeof track.getSettings === "function" ? track.getSettings() : {};
-      console.log("[camera] Active sensor resolution:", settings.width, "x", settings.height);
-      console.log("[camera] Native capabilities:", capabilities);
+  function setupDistanceZoom(track, capabilities) {
+    applyZoomLevel(currentZoom);
+  }
 
-      const advanced = [];
-      // 1. Force continuous native auto-focus
-      if (capabilities.focusMode && capabilities.focusMode.includes("continuous")) {
-        advanced.push({ focusMode: "continuous" });
+  function updateCameraStatusBadge() {
+    const focusEl = $("#camera-focus-status");
+    const lightEl = $("#camera-lighting-status");
+    if (focusEl) {
+      focusEl.textContent = "🎯 Auto-Focus";
+    }
+    if (lightEl) {
+      if (currentLightingMode === "auto") {
+        lightEl.textContent = dynamicLightState === "boosted"
+          ? "☀️ Auto-Light: Low-Light Boosted"
+          : dynamicLightState === "anti-glare"
+          ? "☀️ Auto-Light: Anti-Glare"
+          : "☀️ Auto-Light: Balanced";
+      } else if (currentLightingMode === "boost") {
+        lightEl.textContent = "🔆 Light: Max Boost";
+      } else if (currentLightingMode === "contrast") {
+        lightEl.textContent = "⚡ Light: High Contrast";
       }
-      // 2. Force continuous native auto-exposure
-      if (capabilities.exposureMode && capabilities.exposureMode.includes("continuous")) {
-        advanced.push({ exposureMode: "continuous" });
-      }
-      // 3. Force continuous native white-balance
-      if (capabilities.whiteBalanceMode && capabilities.whiteBalanceMode.includes("continuous")) {
-        advanced.push({ whiteBalanceMode: "continuous" });
-      }
-
-      if (advanced.length > 0 && typeof track.applyConstraints === "function") {
-        await track.applyConstraints({ advanced }).catch(err => {
-          console.warn("[camera] Advanced constraints warning:", err);
-        });
-        console.log("[camera] Continuous auto-focus & exposure active:", advanced);
-      }
-
-      State.activeVideoTrack = track;
-      State.activeTrackCapabilities = capabilities;
-
-      setupTapToFocus(video, track, capabilities);
-      setupDistanceZoom(track, capabilities);
-    } catch (err) {
-      console.warn("[camera] applyNativeCameraEnhancements error:", err);
     }
   }
 
-  function setupTapToFocus(video, track, capabilities) {
-    const root = $("#scanner-root");
-    if (!root || root._tapToFocusInit) return;
-    root._tapToFocusInit = true;
-    root.style.cursor = "crosshair";
-    root.title = "Tap anywhere to auto-focus";
-
-    root.addEventListener("click", async (e) => {
-      if (!State.activeVideoTrack) return;
-      try {
-        createFocusRing(e, root);
-        const adv = [];
-        if (capabilities.focusMode && capabilities.focusMode.includes("continuous")) {
-          adv.push({ focusMode: "continuous" });
-        }
-        if (capabilities.exposureMode && capabilities.exposureMode.includes("continuous")) {
-          adv.push({ exposureMode: "continuous" });
-        }
-        if (adv.length > 0) {
-          await State.activeVideoTrack.applyConstraints({ advanced: adv });
-        }
-      } catch (err) {
-        console.warn("[tap-to-focus] refocus failed:", err);
-      }
-    });
+  async function applyNativeCameraEnhancements() {
+    await applyCameraLightingAndFocus();
   }
 
-  function createFocusRing(e, parent) {
-    const rect = parent.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+  async function triggerCameraRefocus(coords = null) {
+    const parent = $("#camera-frame-wrap") || $("#scanner-root");
+    if (parent) {
+      createFocusRing(coords, parent);
+    }
+
+    const track = State.activeVideoTrack;
+    if (track && typeof track.applyConstraints === "function") {
+      const caps = State.activeTrackCapabilities || (typeof track.getCapabilities === "function" ? track.getCapabilities() : {});
+      const adv = [];
+      if (caps.focusMode && caps.focusMode.includes("continuous")) {
+        adv.push({ focusMode: "continuous" });
+      } else if (caps.focusMode && caps.focusMode.includes("single-shot")) {
+        adv.push({ focusMode: "single-shot" });
+      }
+      if (caps.exposureMode && caps.exposureMode.includes("continuous")) {
+        adv.push({ exposureMode: "continuous" });
+      }
+      if (coords && caps.pointsOfInterest) {
+        const rect = parent ? parent.getBoundingClientRect() : { width: 1, height: 1 };
+        const normX = Math.max(0, Math.min(1, (coords.x || 0) / (rect.width || 1)));
+        const normY = Math.max(0, Math.min(1, (coords.y || 0) / (rect.height || 1)));
+        adv.push({ pointsOfInterest: [{ x: normX, y: normY }] });
+      }
+      if (adv.length > 0) {
+        try {
+          await track.applyConstraints({ advanced: adv }).catch(() => {});
+        } catch (_) {}
+      }
+    }
+
+    const focusStatus = $("#camera-focus-status");
+    if (focusStatus) {
+      focusStatus.textContent = "🎯 Focused";
+      setTimeout(() => { if (focusStatus) focusStatus.textContent = "🎯 Auto-Focus"; }, 1400);
+    }
+  }
+
+  function createFocusRing(coords, parent) {
+    if (!parent) return;
+    let x, y;
+    if (coords && typeof coords.x === "number" && typeof coords.y === "number") {
+      x = coords.x;
+      y = coords.y;
+    } else {
+      const rect = parent.getBoundingClientRect();
+      x = rect.width / 2;
+      y = rect.height / 2;
+    }
     const ring = document.createElement("div");
     ring.className = "camera-focus-ring";
     ring.style.left = `${x}px`;
     ring.style.top = `${y}px`;
     parent.appendChild(ring);
-    setTimeout(() => ring.remove(), 750);
+    setTimeout(() => ring.remove(), 800);
   }
 
-  let currentZoom = 1.0;
-  let currentLightingMode = "auto";
+  function setupTapToFocus(video, track, capabilities) {
+    const root = $("#scanner-root");
+    const wrap = $("#camera-frame-wrap");
+    const target = wrap || root;
+    if (!target) return;
+    target.style.cursor = "crosshair";
+    target.title = "Tap anywhere to auto-focus";
+
+    if (target._tapToFocusInit) return;
+    target._tapToFocusInit = true;
+
+    target.addEventListener("click", async (e) => {
+      if (e.target.closest("button") || e.target.closest(".manual-panel") || e.target.closest("#emotion-overlay") || e.target.closest("#scanner-empty")) {
+        return;
+      }
+      const rect = target.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      await triggerCameraRefocus({ x, y, clientX: e.clientX, clientY: e.clientY });
+    });
+  }
 
   async function applyCameraLightingAndFocus() {
     const video = document.querySelector("#scanner-root video");
     if (!video) return;
-    const stream = video.srcObject;
-    if (!stream) return;
-    const track = stream.getVideoTracks()[0];
+
+    let track = null;
+    let stream = video.srcObject;
+    if (stream && typeof stream.getVideoTracks === "function") {
+      track = stream.getVideoTracks()[0];
+    }
+    if (!track) {
+      const trackReadyPromise = new Promise(resolve => {
+        let attempts = 0;
+        const interval = setInterval(() => {
+          attempts++;
+          const s = video.srcObject;
+          const t = s?.getVideoTracks?.()[0];
+          if (t || attempts > 20) {
+            clearInterval(interval);
+            resolve(t || null);
+          }
+        }, 100);
+      });
+      track = await trackReadyPromise;
+    }
     if (!track) return;
 
     State.activeVideoTrack = track;
@@ -2745,6 +2883,8 @@
     applyZoomLevel(currentZoom);
     applyLightingFilter(currentLightingMode);
     setupTapToFocus(video, track, caps);
+    setupDistanceZoom(track, caps);
+    updateCameraStatusBadge();
   }
 
   async function applyZoomLevel(zoom) {
@@ -2755,7 +2895,6 @@
     const track = State.activeVideoTrack;
     const caps = State.activeTrackCapabilities || {};
 
-    // 1. Hardware optical/digital zoom if camera driver supports it
     if (track && caps.zoom && typeof track.applyConstraints === "function") {
       try {
         const targetZoom = Math.min(caps.zoom.max || 1.0, Math.max(caps.zoom.min || 1.0, zoom));
@@ -2763,7 +2902,6 @@
       } catch (_) {}
     }
 
-    // 2. CSS video scale transform — guarantees distance zoom works on 100% of all webcams and laptops
     const video = document.querySelector("#scanner-root video");
     if (video) {
       const isMirrored = localStorage.getItem("classcare_camera_mirrored") === "true";
@@ -2780,6 +2918,11 @@
     Toast.info(`Camera distance zoom: ${nextZoom.toFixed(1)}x`);
   }
 
+  function toggleCameraFocus() {
+    triggerCameraRefocus();
+    Toast.info("Camera auto-focused 🎯");
+  }
+
   async function applyLightingFilter(mode) {
     currentLightingMode = mode;
     const lightBtn = $("#btn-camera-lighting");
@@ -2789,13 +2932,14 @@
 
     if (mode === "auto") {
       if (lightBtn) lightBtn.innerHTML = `<span>☀️ Light: Auto</span>`;
-      if (video) video.style.filter = "none";
+      // Start with balanced crisp enhancement, real-time AGC in frameScan continuously adapts
+      if (video) video.style.filter = "brightness(1.05) contrast(1.15)";
       if (track && caps.exposureMode && caps.exposureMode.includes("continuous")) {
         try { await track.applyConstraints({ advanced: [{ exposureMode: "continuous" }] }).catch(() => {}); } catch (_) {}
       }
     } else if (mode === "boost") {
       if (lightBtn) lightBtn.innerHTML = `<span>🔆 Light: Boosted</span>`;
-      if (video) video.style.filter = "brightness(1.25) contrast(1.3) saturate(1.05)";
+      if (video) video.style.filter = "brightness(1.32) contrast(1.3) saturate(1.1)";
       if (track && caps.exposureCompensation) {
         try {
           const boostVal = Math.min(caps.exposureCompensation.max || 0, (caps.exposureCompensation.step || 1) * 2);
@@ -2806,12 +2950,13 @@
       if (lightBtn) lightBtn.innerHTML = `<span>⚡ Light: B&W Contrast</span>`;
       if (video) video.style.filter = "grayscale(1) contrast(1.9) brightness(1.2)";
     }
+    updateCameraStatusBadge();
   }
 
   function toggleCameraLighting() {
     const nextMode = currentLightingMode === "auto" ? "boost" : currentLightingMode === "boost" ? "contrast" : "auto";
     applyLightingFilter(nextMode);
-    Toast.info(nextMode === "auto" ? "Auto-lighting enabled" : nextMode === "boost" ? "Brightness & contrast boosted" : "High-contrast B&W active");
+    Toast.info(nextMode === "auto" ? "Auto-adjust lighting enabled ☀️" : nextMode === "boost" ? "Brightness & contrast boosted 🔆" : "High-contrast B&W active ⚡");
   }
 
   function applyCameraOrientation(video) {
@@ -2867,40 +3012,14 @@
     {
       step: 1,
       id: "mood",
-      stepName: "Mood",
-      title: "How are you feeling today?",
-      subtitle: "Choose the emoji that describes your feeling right now.",
+      stepName: "Emotional Check-in",
+      title: "How are you today?",
+      subtitle: "Show 1–4 fingers to the camera, or tap an option below.",
       options: [
         { key: "very_good", label: "Very good", emoji: "🤩", isNegative: false },
         { key: "good", label: "Good", emoji: "🙂", isNegative: false },
         { key: "okay", label: "Okay", emoji: "😐", isNegative: false },
         { key: "not_good", label: "Not good", emoji: "😔", isNegative: true }
-      ]
-    },
-    {
-      step: 2,
-      id: "stress",
-      stepName: "Stress",
-      title: "How stressed do you feel today?",
-      subtitle: "Check in with your stress level this morning.",
-      options: [
-        { key: "not_stressed", label: "Not stressed", emoji: "🎈", isNegative: false },
-        { key: "a_little_stressed", label: "A little stressed", emoji: "🤏", isNegative: false },
-        { key: "quite_stressed", label: "Quite stressed", emoji: "🎒", isNegative: true },
-        { key: "very_stressed", label: "Very stressed", emoji: "🪨", isNegative: true }
-      ]
-    },
-    {
-      step: 3,
-      id: "need",
-      stepName: "Need",
-      title: "What best describes what you need today?",
-      subtitle: "Let your teachers know how to support you best today.",
-      options: [
-        { key: "encouragement", label: "Encouragement", emoji: "🫂", isNegative: false },
-        { key: "rest", label: "Rest", emoji: "🛌", isNegative: false },
-        { key: "someone_to_talk_to", label: "Someone to talk to", emoji: "🗣️", isNegative: true },
-        { key: "time_to_focus", label: "Time to focus on myself", emoji: "🎧", isNegative: false }
       ]
     }
   ];
@@ -2910,20 +3029,17 @@
     stopHighSensitivityScannerLoop();
     const scanner = State.scanner;
     try {
-      // 1. Immediately shut off hardware video sensor to free device resources
-      if (State.activeVideoTrack) {
-        State.activeVideoTrack.enabled = false;
-      }
+      // 1. Keep camera video track enabled for gesture camera preview
       // 2. Hide video feed element immediately so no frozen still is visible
       const videoEl = document.querySelector("#scanner-root video");
       if (videoEl) {
         videoEl.style.opacity = "0";
       }
-      // 3. Pause Html5Qrcode video processing
+      // 3. Pause Html5Qrcode video processing (without freezing video frames)
       if (scanner && typeof scanner.pause === "function") {
         try {
           if (scanner.getState && scanner.getState() === 2 /* SCANNING */) {
-            scanner.pause(true);
+            scanner.pause(false);
           }
         } catch (_) {}
       }
@@ -2938,7 +3054,7 @@
   /* ---- Proper Component Cleanup, Reset, Unmount & Remount ---- */
   async function resetAndRemountScanner() {
     const resetGeneration=State.generation;
-    const restartCamera=State.scanning || !!State.scanner;
+    const restartCamera=true;
     console.log("[scanner] Resetting and remounting camera component for next student...");
     State.transitioning = true;
     try {
@@ -2970,11 +3086,11 @@
       scannerRoot.replaceChildren();
       const emptyDiv = document.createElement("div");
       emptyDiv.id = "scanner-empty";
-      emptyDiv.style.cssText = "text-align:center;color:#94a3b8;";
+      emptyDiv.className = "scanner-empty";
       emptyDiv.innerHTML = `
-        <div style="font-size:2.5rem;margin-bottom:8px;">📷</div>
-        <strong style="display:block;font-size:1.1rem;color:#f1f5f9;">Camera Ready</strong>
-        <span style="font-size:0.85rem;">Hold student ID QR code firmly inside the target guide.</span>
+        <div style="font-size:3rem;margin-bottom:8px;">📷</div>
+        <strong>Camera Ready</strong>
+        <span>Hold student ID QR code firmly inside the target guide.</span>
       `;
       scannerRoot.appendChild(emptyDiv);
     }
@@ -3209,12 +3325,16 @@
           const pr = $("#scanner-gesture-progress");
           if (pr) pr.value = progress;
           document.querySelectorAll("#kiosk-choices-grid .kiosk-choice-btn").forEach((btn, idx) => {
-            btn.classList.toggle("ring-2", idx === count - 1 && progress > 0);
-            btn.classList.toggle("ring-indigo-500", idx === count - 1 && progress > 0);
+            const isActive = idx === count - 1 && progress > 0;
+            btn.classList.toggle("ring-2", isActive);
+            btn.classList.toggle("ring-indigo-500", isActive);
+            btn.classList.toggle("is-active", isActive);
+            btn.classList.toggle("cc-hover", isActive);
           });
         }
       );
-      activeKioskGesture.start().catch(err => {
+      const liveStream = document.querySelector("#scanner-root video")?.srcObject || (State.activeVideoTrack ? new MediaStream([State.activeVideoTrack]) : null);
+      activeKioskGesture.start(liveStream).catch(err => {
         console.warn("[scanner] auto gesture camera start:", err);
         const st = $("#scanner-gesture-status");
         if (st) st.textContent = "Tap a card below to answer";
@@ -3236,7 +3356,7 @@
       const grid = $("#kiosk-choices-grid");
       if (titleEl) titleEl.textContent = q.title;
       if (descEl) descEl.textContent = q.subtitle;
-      if (stepBadge) stepBadge.textContent = `Step ${q.step} of 3: ${q.stepName}`;
+      if (stepBadge) stepBadge.textContent = "Daily Emotional Check-in";
       if (grid) {
         grid.innerHTML = q.options.map((opt, optIndex) => `
           <button type="button" class="btn btn-secondary kiosk-choice-btn ${opt.isNegative ? 'choice-negative' : ''}" data-choice-key="${opt.key}" data-choice-label="${opt.label}" data-choice-emoji="${opt.emoji}" data-choice-neg="${opt.isNegative}" style="position:relative;border-radius:18px;padding:16px;text-align:center;">
@@ -3280,6 +3400,131 @@
     renderStep();
   }
 
+  async function startPreScanEmotionCheck() {
+    const overlay = $("#emotion-overlay");
+    if (!overlay) return;
+    await pauseQRScanner();
+    overlay.classList.remove("hidden");
+    overlay.classList.add("flex", "is-open");
+    overlay.style.display = "flex";
+    const qWrap = $("#kiosk-question-wrap");
+    const successScreen = $("#kiosk-success-screen");
+    const gestureBar = $("#kiosk-gesture-bar");
+    if (successScreen) successScreen.classList.add("hidden");
+    if (qWrap) qWrap.classList.remove("hidden");
+    if (gestureBar) gestureBar.style.display = "flex";
+
+    const sName = $("#kiosk-student-name");
+    if (sName) sName.textContent = "Attendance Check-in";
+    const stepBadge = $("#kiosk-step-indicator");
+    if (stepBadge) stepBadge.textContent = "How are you today?";
+
+    if (activeKioskGesture) {
+      activeKioskGesture.stop();
+      activeKioskGesture = null;
+    }
+    const gestureVideo = $("#scanner-gesture-video");
+    if (gestureVideo && window.ClassCareGestureCamera) {
+      activeKioskGesture = new ClassCareGestureCamera(
+        gestureVideo,
+        choiceIndex => {
+          const btns = document.querySelectorAll("#kiosk-choices-grid .kiosk-choice-btn");
+          if (btns && btns[choiceIndex]) {
+            btns[choiceIndex].click();
+          }
+        },
+        statusText => {
+          const st = $("#scanner-gesture-status");
+          if (st) st.textContent = statusText;
+        },
+        (count, progress) => {
+          const pr = $("#scanner-gesture-progress");
+          if (pr) pr.value = progress;
+          document.querySelectorAll("#kiosk-choices-grid .kiosk-choice-btn").forEach((btn, idx) => {
+            const isActive = idx === count - 1 && progress > 0;
+            btn.classList.toggle("ring-2", isActive);
+            btn.classList.toggle("ring-indigo-500", isActive);
+            btn.classList.toggle("is-active", isActive);
+            btn.classList.toggle("cc-hover", isActive);
+          });
+        }
+      );
+      const liveStream = document.querySelector("#scanner-root video")?.srcObject || (State.activeVideoTrack ? new MediaStream([State.activeVideoTrack]) : null);
+      activeKioskGesture.start(liveStream).catch(err => {
+        console.warn("[scanner] auto gesture camera start:", err);
+        const st = $("#scanner-gesture-status");
+        if (st) st.textContent = "Tap a card below to answer";
+      });
+    }
+
+    const q = KIOSK_3STEP_QUESTIONS[0];
+    const titleEl = $("#kiosk-step-title");
+    const descEl = $("#kiosk-step-desc");
+    const grid = $("#kiosk-choices-grid");
+    if (titleEl) titleEl.textContent = q.title;
+    if (descEl) descEl.textContent = q.subtitle;
+    if (grid) {
+      grid.innerHTML = q.options.map((opt, optIndex) => `
+        <button type="button" class="btn btn-secondary kiosk-choice-btn ${opt.isNegative ? 'choice-negative' : ''}" data-choice-key="${opt.key}" data-choice-label="${opt.label}" data-choice-emoji="${opt.emoji}" data-choice-neg="${opt.isNegative}" style="position:relative;border-radius:18px;padding:16px;text-align:center;">
+          <span style="position:absolute;top:8px;left:12px;font-size:0.75rem;font-weight:800;color:var(--text-muted);">${optIndex + 1}</span>
+          <span class="choice-emoji" style="font-size:2.2rem;display:block;margin-bottom:6px;">${opt.emoji}</span>
+          <strong style="display:block;font-size:1.02rem;">${opt.label}</strong>
+        </button>
+      `).join("");
+      grid.querySelectorAll(".kiosk-choice-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          grid.querySelectorAll(".kiosk-choice-btn").forEach(b => b.disabled = true);
+          SoundFeedback.play("tap");
+          if (activeKioskGesture) {
+            activeKioskGesture.stop();
+            activeKioskGesture = null;
+          }
+          const key = btn.dataset.choiceKey;
+          const label = btn.dataset.choiceLabel;
+          const emoji = btn.dataset.choiceEmoji;
+          const isNeg = btn.dataset.choiceNeg === "true";
+          State.pendingKioskMood = {
+            mood: label,
+            mood_key: key,
+            mood_emoji: emoji,
+            mood_negative: isNeg,
+            timestamp: Date.now()
+          };
+
+          // Dismiss modal immediately
+          overlay.classList.add("hidden");
+          overlay.classList.remove("flex", "is-open");
+          overlay.style.display = "none";
+
+          Toast.success(`Mood selected: ${emoji} ${label}! Camera ready — scan your Student QR card now.`);
+
+          // AUTOMATICALLY open the camera to scan the QR code!
+          try {
+            await startScanner();
+          } catch (e) {
+            console.warn("[scanner] auto-open camera error:", e);
+          }
+        });
+      });
+    }
+  }
+
+  if (typeof document !== "undefined") {
+    const attachQuickEmotion = () => {
+      const qBtn = document.getElementById("btn-quick-emotion-check");
+      if (qBtn && !qBtn._quickEmotionBound) {
+        qBtn._quickEmotionBound = true;
+        qBtn.addEventListener("click", () => startPreScanEmotionCheck());
+      }
+    };
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", attachQuickEmotion);
+    } else {
+      attachQuickEmotion();
+    }
+  }
+  window.startPreScanEmotionCheck = startPreScanEmotionCheck;
+
   async function verifyStudentBelongsToTeacher(student, teacher) {
     return ClassCareKioskData.canScan(teacher, student);
   }
@@ -3292,6 +3537,31 @@
     } catch (error) {
       showResultError('Cannot scan student', error.message);
       SoundFeedback.play("error");
+      return;
+    }
+
+    // Check if student already selected their mood before scanning QR card!
+    const pendingMood = State.pendingKioskMood && (Date.now() - State.pendingKioskMood.timestamp < 90000) ? State.pendingKioskMood : null;
+    State.pendingKioskMood = null;
+
+    if (pendingMood) {
+      pauseQRScanner().catch(() => {});
+      try {
+        const result = await ClassCareKioskData.saveAttendance(student, State.teacher, null, State.settings, getActiveTeacherAssignment());
+        const rec = result.record;
+        State.attendance.set(student.uid, rec);
+        showResult(student, result.kind === 'time_out' ? 'Time Out' : rec.status, rec.time_in, rec.minutes_late || 0, result.kind === 'duplicate' ? 'duplicate' : 'saved', rec);
+        if (result.kind === 'saved') {
+          await finish3StepEmotionalCheck(student, pendingMood, rec);
+        } else {
+          Toast.info(result.kind === 'time_out' ? 'Time out recorded.' : 'Attendance already recorded today.');
+          State.resetTimer = setTimeout(() => { void resetAndRemountScanner(); }, 2500);
+        }
+      } catch (error) {
+        showResultError('Attendance not saved', error.message + ' Retry the scan.');
+        Toast.error('Attendance not saved. Reconnect and retry.');
+        await resumeQRScanner();
+      }
       return;
     }
 
@@ -3514,7 +3784,13 @@
     } else if (email.reason === "no-email") {
       Toast?.warn(`⚠️ Walang parent email na naka-save para kay ${sName}. Paki-update sa Student Profile o Admin.`);
     } else if (email.reason === "request-failed") {
-      Toast?.error(`⚠️ EmailJS error: ${email.error?.text || email.error?.message || "Could not send email"}`);
+      const rawErr = email.error?.text || email.error?.message || "Could not send email";
+      const isInvalidGrant = /invalid grant|reconnect/i.test(rawErr);
+      if (isInvalidGrant) {
+        Toast?.error("⚠️ EmailJS: Reconnect Gmail in EmailJS dashboard (Invalid Grant)");
+      } else {
+        Toast?.error(`⚠️ EmailJS error: ${rawErr}`);
+      }
     }
 
     const alert = $("#scan-alert-row"); const text = $("#scan-alert-text");
@@ -3532,9 +3808,17 @@
       if (text) text.textContent = "Email skipped/failed; parent alert sent by Telegram.";
       if (kParent) kParent.textContent = "Parent alert delivered via Telegram.";
     } else {
+      const rawErr = email.error?.text || email.error?.message || "";
+      const isInvalidGrant = /invalid grant|reconnect/i.test(rawErr);
+      const errDetail = email.reason === "no-email"
+        ? "No parent email on student file."
+        : isInvalidGrant
+        ? "Reconnect Gmail in EmailJS dashboard"
+        : rawErr ? `Email delivery failed (${rawErr})` : "Parent email delivery failed.";
+
       if (alert) alert.className = "scan-alert alert-warning";
-      if (text) text.textContent = email.reason === "no-email" ? "No parent email is configured." : "Parent email delivery failed. Check EmailJS settings.";
-      if (kParent) kParent.textContent = email.reason === "no-email" ? "No parent email on student file." : "Parent email delivery attempted.";
+      if (text) text.textContent = email.reason === "no-email" ? "No parent email is configured." : errDetail;
+      if (kParent) kParent.textContent = email.reason === "no-email" ? "No parent email on student file." : `⚠️ ${errDetail}`;
     }
   }
   function updateChooser() { window.dispatchEvent(new CustomEvent("classcare:roster-updated", { detail: { students: studentsPresent() } })); }

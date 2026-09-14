@@ -26,7 +26,26 @@
   function canScanSync(user, student) {
     return !!user && !user.disabled && !!student && (user.role === 'admin' || (user.role === 'teacher' && user.pending_approval === false));
   }
-  async function canScan(user, student) { return canScanSync(user, student); }
+  async function canScan(user, student) {
+    if (canScanSync(user, student)) return true;
+    try {
+      const auth = ClassCare?.getFirebase?.()?.auth;
+      const currentUser = typeof auth === 'function' ? auth().currentUser : auth?.currentUser;
+      if (currentUser?.uid) {
+        let snap = null;
+        try {
+          snap = await ClassCare.DB.users.doc(currentUser.uid).get({ source: 'server' });
+        } catch (_) {
+          snap = await ClassCare.DB.users.doc(currentUser.uid).get().catch(() => null);
+        }
+        if (snap?.exists) {
+          const u = { ...snap.data(), uid: currentUser.uid };
+          if (canScanSync(u, student)) return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
 
   async function lookup(raw, user) {
     let uid, sid;
@@ -52,12 +71,12 @@
     }
     if (!doc && typeof sid === 'string') {
       try {
-        const query = await ClassCare.DB.users.where('student_id', '==', sid).limit(2).get({ source: 'server' });
+        const query = await ClassCare.DB.users.where('role', '==', 'student').where('student_id', '==', sid).limit(2).get({ source: 'server' });
         if (query.size > 1) throw new Error('This ID is assigned to multiple profiles. Ask administration to correct it.');
         if (!query.empty) doc = query.docs[0];
       } catch (err) {
         if (err.message && err.message.includes('multiple profiles')) throw err;
-        const query = await ClassCare.DB.users.where('student_id', '==', sid).limit(2).get().catch(() => null);
+        const query = await ClassCare.DB.users.where('role', '==', 'student').where('student_id', '==', sid).limit(2).get().catch(() => null);
         if (query && !query.empty) doc = query.docs[0];
       }
     }
@@ -74,12 +93,26 @@
 
     if (!student || String(student.role).toLowerCase() !== 'student') throw new Error('Student ID was not found.');
     if (sid && sid !== text && student.student_id && student.student_id !== sid) throw new Error('QR student ID does not match the profile.');
+    if (student.disabled) throw new Error('Student account has been disabled.');
+    if (student.pending_approval === true || student.enrollment_status === 'pending' || !student.section) {
+      throw new Error('Student account is pending administrator approval. Please approve the student and assign a section in the Admin portal first.');
+    }
     if (!(await canScan(user, student))) throw new Error('Approved staff access is required.');
     return student;
   }
 
   async function saveAttendance(student, user, mood, settings = {}, assignment = null) {
     if (!navigator.onLine) throw new Error('You are offline. Reconnect and retry; attendance has not been saved.');
+    if (!user) {
+      try {
+        const auth = ClassCare?.getFirebase?.()?.auth;
+        const currentUser = typeof auth === 'function' ? auth().currentUser : auth?.currentUser;
+        if (currentUser?.uid) {
+          const snap = await ClassCare.DB.users.doc(currentUser.uid).get().catch(() => null);
+          if (snap?.exists) user = { ...snap.data(), uid: currentUser.uid };
+        }
+      } catch (_) {}
+    }
     if (!(await canScan(user, student))) throw new Error('Approved staff access is required.');
     const emotion = H.MOODS.find(m => m.key === mood);
     if (mood !== null && !emotion) throw new Error('Choose a mood or skip the optional check-in.');
@@ -91,12 +124,13 @@
       const evaluation = Utils.computeHierarchicalAttendance(time, settings, assignment, old);
       if (old?.time_in) {
         if (evaluation.action === 'time_out' && !old.time_out) {
-          tx.update(ref, { time_out: time, time_out_scanned_by: user.uid, time_out_scanned_at: stamp() });
+          tx.update(ref, { studentId: student.uid, time_out: time, time_out_scanned_by: user?.uid || '', time_out_scanned_at: stamp() });
           return { record: { ...old, time_out: time }, kind: 'time_out' };
         }
         return { record: old, kind: 'duplicate' };
       }
       const record = {
+        studentId: student.uid,
         student_uid: student.uid,
         student_id: student.student_id || '',
         student_name: name(student),
@@ -159,17 +193,28 @@
 
   async function saveDeep(student, user, answers, id) {
     if (!navigator.onLine) throw new Error('Reconnect before saving this assessment.');
+    if (!user) {
+      try {
+        const auth = ClassCare?.getFirebase?.()?.auth;
+        const currentUser = typeof auth === 'function' ? auth().currentUser : auth?.currentUser;
+        if (currentUser?.uid) {
+          const snap = await ClassCare.DB.users.doc(currentUser.uid).get().catch(() => null);
+          if (snap?.exists) user = { ...snap.data(), uid: currentUser.uid };
+        }
+      } catch (_) {}
+    }
     if (!(await canScan(user, student))) throw new Error('Approved staff access is required.');
     const result = H.summarize(answers);
     await ClassCare.DB.emotional_checkins.doc(id).set({
       ...result,
+      studentId: student.uid,
       student_uid: student.uid,
       student_id: student.student_id || '',
       student_name: name(student),
       photo_data: student.photo_data || '',
       section: student.section || '',
-      teacherId: user.uid,
-      recorded_by: user.uid,
+      teacherId: user?.uid || '',
+      recorded_by: user?.uid || '',
       recorded_via: 'deep_kiosk',
       questionnaire_version: 1,
       date: H.schoolDate(),

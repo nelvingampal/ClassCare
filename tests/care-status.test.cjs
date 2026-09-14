@@ -10,7 +10,7 @@ test('Overview preserves pending and unavailable care states until every source 
   const query = () => ({ where(){return this;}, onSnapshot(options,next,error){listeners.push({next,error});return ()=>{};} });
   vm.runInNewContext(fs.readFileSync('js/holistic-portals.js','utf8'), {
     ClassCareHolistic:{schoolDate:()=> '2026-09-13'},
-    ClassCare:{getFirebase:()=>({db:{collection:query}}),DB:{emotional_checkins:query(),attendance:query(),users:query(),grades:query()},onCurrentUser(cb){cb({uid:'audit',role:'teacher',pending_approval:false});return ()=>{};}},
+    ClassCare:{collection:query,getFirebase:()=>({db:{collection:query}}),DB:{emotional_checkins:query(),attendance:query(),users:query(),grades:query()},onCurrentUser(cb){cb({uid:'audit',role:'teacher',pending_approval:false});return ()=>{};}},
     document:{createElement:element,getElementById:id=>elements[id]},window:{dispatchEvent(){},addEventListener(){}},CustomEvent:function(){},navigator:{onLine:false},setInterval:()=>0,clearInterval(){}
   });
   const status=()=>elements['overview-care-status'].textContent;

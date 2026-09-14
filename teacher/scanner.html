@@ -10,11 +10,11 @@
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="https://gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-  <script src="https://gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-  <script src="https://gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
   <script src="../js/config.js"></script>
-  <script src="../config/firebase-config.js"></script>
+  <script src="../js/scoped-collection.js"></script><script src="../js/protected-route.js"></script><script src="../js/analytics-privacy.js"></script><script src="../config/firebase-config.js"></script>
   <script src="../js/theme.js"></script>
   <script src="../js/toast.js"></script>
   <script src="../js/utils.js"></script>
@@ -24,6 +24,8 @@
   <script src="../js/offline-sync.js"></script>
   <script src="../js/holistic-core.js" defer></script>
   <script src="../js/kiosk-data.js" defer></script>
+  <script src="../js/alertEngine.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" defer></script>
   <script src="./hand-gestures.js" defer></script>
   <script src="./scanner.js" defer></script>
 </head>
@@ -73,11 +75,17 @@
 
           <div class="scanner-frame-wrap" id="camera-frame-wrap" style="aspect-ratio: 4/3; min-height: 340px; position: relative; background: #090d16;">
             <div id="scanner-root" style="width: 100%; height: 100%; position: relative;">
-              <div id="scanner-empty" class="scanner-empty" style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 5;">
-                <div style="font-size: 3rem; margin-bottom: 10px;">📷</div>
-                <strong style="font-size: 1.15rem; color: #f8fafc;">Camera Ready</strong>
-                <span style="font-size: 0.85rem; color: #94a3b8; max-width: 260px; margin-top: 4px;">Start camera to begin high-accuracy long-distance scanning.</span>
+              <div id="scanner-empty" class="scanner-empty">
+                <div style="font-size: 3rem; margin-bottom: 8px;">📷</div>
+                <strong>Camera Ready</strong>
+                <span>Start camera to begin high-accuracy long-distance scanning.</span>
               </div>
+            </div>
+            <!-- Active Auto-Focus & Auto-Lighting Live Status Badge -->
+            <div id="camera-opt-badge" style="position: absolute; top: 12px; left: 12px; z-index: 10; font-size: 0.76rem; font-weight: 700; background: rgba(15, 23, 42, 0.82); backdrop-filter: blur(8px); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 20px; padding: 4px 12px; display: flex; align-items: center; gap: 8px; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+              <span id="camera-focus-status">🎯 Auto-Focus</span>
+              <span style="opacity: 0.35;">•</span>
+              <span id="camera-lighting-status">☀️ Auto-Light</span>
             </div>
             <div class="scan-frame" aria-hidden="true"><div class="scan-laser"></div></div>
           </div>
@@ -88,6 +96,12 @@
             </button>
             <button id="btn-stop-scan" class="btn btn-secondary hidden" type="button" style="font-weight: 750; padding: 9px 20px;">
               <span>⏹ Stop camera</span>
+            </button>
+            <button id="btn-quick-emotion-check" class="btn btn-secondary btn-sm" type="button" title="Quick Emotional Check-in via Hand Gesture" style="font-weight: 750; border-radius: 8px; color: #a5b4fc; border: 1px solid rgba(165, 180, 252, 0.35); padding: 7px 14px;">
+              <span>✨ Check-in (Hand Gesture)</span>
+            </button>
+            <button id="btn-camera-focus" class="btn btn-secondary btn-sm" type="button" title="Auto-Focus: tap to refocus or tap anywhere on camera feed" style="font-weight: 750; border-radius: 8px; color: #34d399; border: 1px solid rgba(52, 211, 153, 0.35); padding: 7px 12px;">
+              <span>🎯 Focus: Auto</span>
             </button>
             <button id="btn-camera-zoom" class="btn btn-secondary btn-sm" type="button" title="Distance Zoom: scan from far away" style="font-weight: 750; border-radius: 8px; color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); padding: 7px 12px;">
               <span>🔍 Zoom: 1.0x</span>
@@ -177,7 +191,7 @@
           <div class="brand-mark" style="width: 34px; height: 34px; font-size: 1rem; border-radius: 10px;">C</div>
           <div>
             <strong id="kiosk-student-name" style="display: block; font-size: 1.1rem; font-weight: 850;">Student</strong>
-            <span id="kiosk-step-indicator" style="font-size: 0.78rem; color: #6366f1; font-weight: 800; text-transform: uppercase;">Step 1 of 3: Mood</span>
+            <span id="kiosk-step-indicator" style="font-size: 0.78rem; color: #6366f1; font-weight: 800; text-transform: uppercase;">Daily Emotional Check-in</span>
           </div>
         </div>
         <button id="btn-skip-emotion" type="button" class="btn btn-ghost btn-sm" style="color: var(--text-muted); font-weight: 700;">
@@ -201,8 +215,8 @@
 
       <!-- Question Content -->
       <div id="kiosk-question-wrap" style="padding: 20px 24px 28px;">
-        <h2 id="kiosk-step-title" style="margin: 0 0 6px; font-size: 1.45rem; font-weight: 850; text-align: center;">How are you feeling today?</h2>
-        <p id="kiosk-step-desc" style="margin: 0 0 20px; text-align: center; color: var(--text-muted); font-size: 0.92rem;">Show 1–4 fingers, or tap a card below.</p>
+        <h2 id="kiosk-step-title" style="margin: 0 0 6px; font-size: 1.45rem; font-weight: 850; text-align: center;">How are you today?</h2>
+        <p id="kiosk-step-desc" style="margin: 0 0 20px; text-align: center; color: var(--text-muted); font-size: 0.92rem;">Show 1–4 fingers to the camera, or tap an option below.</p>
         <div id="kiosk-choices-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;"></div>
       </div>
 

@@ -7,6 +7,8 @@
   <meta name="theme-color" content="#1D4ED8" />
   <meta name="sw-root" content="../" />
   <link rel="manifest" href="../manifest.json" />
+  <link rel="apple-touch-icon" href="../assets/brand/svg/classcare-symbol-color.svg" />
+  <link rel="icon" type="image/svg+xml" href="../assets/brand/svg/classcare-symbol-color.svg" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -15,7 +17,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
   <script src="../js/config.js"></script>
-  <script src="../config/firebase-config.js"></script>
+  <script src="../js/scoped-collection.js"></script><script src="../js/protected-route.js"></script><script src="../js/analytics-privacy.js"></script><script src="../config/firebase-config.js"></script>
   <script src="../js/theme.js"></script>
   <script src="../js/toast.js"></script>
   <script src="../js/utils.js"></script>
@@ -262,8 +264,8 @@
               <div style="display:flex;align-items:center;gap:12px;">
                 <div style="width:38px;height:38px;border-radius:50%;background:rgba(234,88,12,0.15);display:flex;align-items:center;justify-content:center;font-size:1.25rem;">👨‍🏫</div>
                 <div>
-                  <div style="font-weight:750;font-size:0.95rem;color:#c2410c;">Teacher Registrations Awaiting Approval</div>
-                  <div id="admin-pending-teachers-count-text" style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;">Teacher accounts are waiting for IT approval and section assignments.</div>
+                  <div style="font-weight:750;font-size:0.95rem;color:#c2410c;">Account Registrations Awaiting Approval</div>
+                  <div id="admin-pending-teachers-count-text" style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;">Student and teacher accounts are waiting for IT approval.</div>
                 </div>
               </div>
               <a href="#tab-users" id="btn-review-pending-teachers" data-tab-link="users" class="btn btn-primary btn-sm" style="display:inline-flex;align-items:center;gap:6px;">Review &amp; Approve Teachers →</a>
@@ -493,7 +495,7 @@
             </table>
           </div>
         </section>
-        <section id="tab-helpdesk" class="section-stack hidden" role="tabpanel"><div class="page-header"><div><h2 class="page-title">Help requests</h2><p class="page-subtitle">Reply to students and keep requests moving.</p></div><div class="tabs" role="tablist" aria-label="Help request filter"><button data-filter="Open" class="tab-btn active" type="button">Open</button><button data-filter="Resolved" class="tab-btn" type="button">Resolved</button><button data-filter="" class="tab-btn" type="button">All</button></div></div><div id="helpdesk-list" class="inbox-list"></div><div id="helpdesk-detail" class="detail-panel hidden"></div></section>
+        <section id="tab-helpdesk" class="section-stack hidden" role="tabpanel"><div class="page-header"><div><h2 class="page-title">Help requests</h2><p class="page-subtitle">Reply to students and keep requests moving.</p></div><div class="tabs" role="tablist" aria-label="Help request filter"><button role="tab" aria-selected="true" data-filter="Open" class="tab-btn active" type="button">Open</button><button role="tab" aria-selected="false" data-filter="Resolved" class="tab-btn" type="button">Resolved</button><button role="tab" aria-selected="false" data-filter="" class="tab-btn" type="button">All</button></div></div><div id="helpdesk-list" class="inbox-list"></div><div id="helpdesk-detail" class="detail-panel hidden"></div></section>
         <section id="tab-wellbeing" class="section-stack hidden" role="tabpanel">
           <div class="page-header">
             <div>
@@ -619,7 +621,7 @@
                   <span style="font-size:13px;color:var(--text-muted);">When open, students with accounts can access the Enrollment page to submit their data for admin approval.</span>
                 </div>
                 <label class="switch" style="flex-shrink:0;">
-                  <input type="checkbox" id="toggle-enrollment" />
+                  <input type="checkbox" id="toggle-enrollment" title="Allow students to submit enrollment requests" aria-label="Allow students to submit enrollment requests" />
                   <span class="slider round"></span>
                 </label>
               </div>

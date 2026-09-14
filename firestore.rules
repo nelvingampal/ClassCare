@@ -1,234 +1,160 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() {
-      return request.auth != null;
-    }
-
-    function userExists() {
-      return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
-    }
-
-    function currentUserDoc() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid));
-    }
-
-    function getUserRole() {
-      return signedIn() && userExists() && ('role' in currentUserDoc().data) && (currentUserDoc().data.role is string)
-        ? currentUserDoc().data.role
-        : (signedIn() && request.auth.token != null && ('role' in request.auth.token) && (request.auth.token.role is string) ? request.auth.token.role : "");
-    }
-
-    function isAdmin() {
-      return signedIn() && (!userExists() || currentUserDoc().data.get('disabled', false) == false) && (
-        getUserRole() in ["admin", "Admin", "ADMIN"]
-        || (request.auth.token != null && (('admin' in request.auth.token && request.auth.token.admin == true) || ('role' in request.auth.token && request.auth.token.role in ["admin", "Admin", "ADMIN"])))
-      );
-    }
-
-    function isTeacher() {
-      return signedIn() && (isAdmin() || (userExists()
-        && getUserRole() in ["teacher", "Teacher", "TEACHER"]
-        && currentUserDoc().data.get('pending_approval', true) == false
-        && currentUserDoc().data.get('disabled', false) == false));
-    }
-
-    function isOwner(userId) {
-      return signedIn() && request.auth.uid == userId;
-    }
-
-    function sectionMatchesTeacher(section) {
-      return isTeacher();
-    }
-
-    match /users/{userId} {
-      // Staff can read the roster; students can read their own profile.
-      allow read: if isTeacher() || isOwner(userId);
-
-      // Admins can create any user; teachers can register walk-in students; users can sign up
-      allow create: if isAdmin()
-        || (isTeacher() && ('role' in request.resource.data) && (request.resource.data.role in ["student", "Student", "STUDENT"]))
-        || (isOwner(userId)
-          && ('role' in request.resource.data)
-          && (request.resource.data.role in ["student", "teacher"])
-          && request.resource.data.get('disabled', false) == false
-          && (request.resource.data.role != 'teacher' || request.resource.data.get('pending_approval', false) == true)
-          && !request.resource.data.keys().hasAny(['admin', 'isAdmin', 'claims']));
-
-      // Admins have full update rights; teachers can update student records; users update their own profile without modifying role
-      allow update: if isAdmin()
-        || (isTeacher() && ('role' in resource.data) && (resource.data.role in ["student", "Student", "STUDENT"])
-          && request.resource.data.role == resource.data.role
-          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['admin','isAdmin','claims','pending_approval']))
-        || (isOwner(userId)
-          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'disabled', 'pending_approval', 'assigned_sections', 'teaching_assignments', 'section', 'preferred_section', 'teacher_uid', 'enrollment_status', 'admin', 'isAdmin', 'claims']));
-
-      allow delete: if isAdmin();
-
-      match /moods/{moodDate} {
-        allow read, write: if isAdmin() || isOwner(userId) || isTeacher();
-      }
-    }
-
-    match /attendance/{attendanceId} {
-      allow read: if isAdmin()
-        || isTeacher()
-        || (signedIn() && (
-          resource.data.student_uid == request.auth.uid
-          || resource.data.student_id == request.auth.uid
-        ));
-      allow create, update: if isAdmin() || isTeacher();
-      allow delete: if isAdmin();
-    }
-
-    match /enrollments/{enrollmentId} {
-      allow read: if isAdmin()
-        || isTeacher()
-        || (signedIn() && (
-          resource.data.student_uid == request.auth.uid
-          || resource.data.student_id == request.auth.uid
-        ));
-      allow create: if isAdmin() || isTeacher()
-        || (signedIn() && (
-          request.resource.data.student_uid == request.auth.uid
-          || request.resource.data.student_id == request.auth.uid
-        ));
-      allow delete: if isAdmin() || isTeacher();
-      allow update: if isTeacher() || (signedIn() && resource.data.student_uid == request.auth.uid
-        && request.resource.data.student_uid == request.auth.uid
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status','teacher_uid','section','approved','approved_by']));
-    }
-
-    match /grades/{gradeId} {
-      allow read: if isTeacher();
-      allow create, update: if isTeacher();
-      allow delete: if isAdmin();
-    }
-
-    match /helpdesk_tickets/{ticketId} {
-      allow read: if isAdmin() || isTeacher() || (signedIn() && (resource.data.sender_uid == request.auth.uid || resource.data.student_uid == request.auth.uid));
-      allow create: if signedIn() && (request.resource.data.sender_uid == request.auth.uid || request.resource.data.student_uid == request.auth.uid);
-      allow update: if isAdmin() || isTeacher();
-      allow delete: if isAdmin() || (signedIn() && (resource.data.sender_uid == request.auth.uid || resource.data.student_uid == request.auth.uid));
-    }
-
-    match /settings/{settingId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /pending_alerts/{alertId} {
-      allow create: if signedIn();
-      allow read, update, delete: if isAdmin();
-    }
-
-    match /audit_log/{logId} {
-      allow read, delete: if isAdmin();
-      allow create: if signedIn();
-      allow update: if isAdmin();
-    }
-
-    match /telegram_users/{telegramUserId} {
-      allow read: if isTeacher();
-      allow write: if isAdmin();
-    }
-
-    match /section_counters/{counterId} {
-      allow read: if signedIn();
-      allow create, update: if signedIn();
-      allow delete: if isAdmin();
-    }
-
-    function fiveAnswers(d) {
-      return d.answers is map && d.answers.keys().hasAll(['mood','stress','motivation','support','needs'])
-        && validAnswer(d.answers.mood) && validAnswer(d.answers.stress) && validAnswer(d.answers.motivation)
-        && validAnswer(d.answers.support) && validAnswer(d.answers.needs);
-    }
-    function validAnswer(a) { return a.option is int && a.option >= 1 && a.option <= 4 && a.label is string; }
-    function validCheck(d) {
-      return d.student_uid is string && (d.get('recorded_via', '') != 'deep_kiosk' || (isTeacher() && fiveAnswers(d)));
-    }
-    match /emotional_checkins/{checkinId} {
-      allow get: if isTeacher() || (signedIn() && checkinId.matches('^' + request.auth.uid + '_[0-9]{4}-[0-9]{2}-[0-9]{2}$'))
-        || (signedIn() && resource.data.student_uid == request.auth.uid);
-      allow list: if isTeacher() || (signedIn() && resource.data.student_uid == request.auth.uid);
-      allow create: if validCheck(request.resource.data) && (isTeacher() || (isOwner(request.resource.data.student_uid)
-        && request.resource.data.get('recorded_via', '') != 'deep_kiosk'));
-      allow update: if validCheck(request.resource.data) && request.resource.data.student_uid == resource.data.student_uid
-        && (isTeacher() || (isOwner(resource.data.student_uid) && resource.data.get('recorded_via', '') != 'deep_kiosk'
-          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['recorded_by','teacherId','recorded_via','section'])));
-      allow delete: if isAdmin();
-    }
-
-    match /intervention_alerts/{alertId} {
-      allow read: if isAdmin()
-        || isTeacher()
-        || (signedIn() && resource.data.student_uid == request.auth.uid);
-      allow create: if isAdmin() || isTeacher();
-      allow update: if isAdmin() || isTeacher();
-      allow delete: if isAdmin();
-    }
-
-    match /teacher_subjects/{subjectDocId} {
-      allow read: if signedIn();
-      allow create, update: if isAdmin()
-        || (isTeacher() && subjectDocId == request.auth.uid);
-      allow delete: if isAdmin();
-    }
-
-    match /enrollment_requests/{requestId} {
-      allow read: if isAdmin()
-        || isTeacher()
-        || (signedIn() && resource.data.student_uid == request.auth.uid);
-      allow create: if isAdmin()
-        || isTeacher()
-        || (signedIn() && request.resource.data.student_uid == request.auth.uid);
-      allow delete: if isAdmin();
-      allow update: if isTeacher() || (signedIn() && resource.data.student_uid == request.auth.uid
-        && request.resource.data.student_uid == request.auth.uid
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status','teacher_uid','section','approved','approved_by']));
-    }
-
-    match /sections/{sectionId} {
-      allow read: if signedIn();
-      allow write: if isAdmin() || isTeacher();
-    }
-
-    match /students/{studentId} {
-      allow read: if signedIn();
-      allow write: if isAdmin() || isTeacher();
-    }
-
-    // Student "Talk to Someone" concern channel (accessible to Admin & Teacher as Co-Admin)
-    match /concern_submissions/{submissionId} {
-      // Allow creation for student mental health safety & crisis reporting (authenticated, anonymous, or shared-device)
-      allow create: if true;
-      // Admin and Teacher can read concerns; students can read their own; signed-in users can listen
-      allow read: if isTeacher() || (signedIn() && resource.data.student_uid == request.auth.uid);
-      // Admin and Teacher can update (mark resolved, add action notes)
-      allow update: if isTeacher();
-      allow delete: if isAdmin();
-    }
-
-    match /talkToSomeone/{submissionId} {
-      allow create: if true;
-      allow read: if isTeacher() || (signedIn() && resource.data.student_uid == request.auth.uid);
-      allow update: if isTeacher();
-      allow delete: if isAdmin();
-    }
-
-    // Escalated intervention alerts (teacher → counselor referrals)
-    match /concern_referrals/{referralId} {
-      allow create: if isAdmin() || isTeacher();
-      allow read: if isAdmin() || isTeacher();
-      allow update: if isAdmin() || isTeacher();
-      allow delete: if isAdmin();
-    }
-
+    function signedIn() { return request.auth != null; }
+    function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function active() { return signedIn() && profile().get('disabled', false) == false; }
+    function isAdmin() { return active() && profile().role == 'admin'; }
+    function isTeacher() { return active() && profile().role == 'teacher' && profile().get('pending_approval', true) == false; }
+    function isStaff() { return isAdmin() || isTeacher(); }
     function assignedSection(section) {
       return isAdmin() || (isTeacher() && section is string && section.size() > 0);
     }
+    function owner(d) {
+      return active() && profile().role == 'student' &&
+        (d.get('student_uid', d.get('studentId', '')) == request.auth.uid || d.get('sender_uid', '') == request.auth.uid);
+    }
+    function studentOwner(d) {
+      return active() && profile().role == 'student' &&
+        (d.get('student_uid', d.get('studentId', '')) == request.auth.uid || d.get('sender_uid', '') == request.auth.uid);
+    }
+    function scoped(d) { return assignedSection(d.get('section', '')); }
+    function validStudent(d) {
+      let uid = d.get('studentId', d.get('student_uid', ''));
+      let s = get(/databases/$(database)/documents/users/$(uid)).data;
+      return uid is string && s.role == 'student' && s.section == d.section
+        && d.get('student_uid', uid) == uid
+        && (d.get('recorded_via', '') != 'deep_kiosk' || fiveAnswers(d));
+    }
+    function answer(a) { return a.option is int && a.option >= 1 && a.option <= 4 && a.label is string; }
+    function fiveAnswers(d) {
+      return d.answers is map && d.answers.keys().hasAll(['mood','stress','motivation','support','needs'])
+        && answer(d.answers.mood) && answer(d.answers.stress) && answer(d.answers.motivation)
+        && answer(d.answers.support) && answer(d.answers.needs);
+    }
+    function safeUpdate() {
+      let oldId = resource.data.get('studentId', resource.data.get('student_uid', ''));
+      let newId = request.resource.data.get('studentId', request.resource.data.get('student_uid', ''));
+      return newId == oldId && request.resource.data.section == resource.data.section;
+    }
+    function studentCreateAllowed(kind, d) {
+      return kind in ['emotionalChecks', 'emotional_checkins', 'helpdesk_tickets', 'concern_submissions', 'talkToSomeone', 'enrollment_requests']
+        && profile().get('pending_approval', false) == false
+        && studentOwner(d)
+        && d.get('recorded_via', '') != 'deep_kiosk'
+        && !(kind in ['concern_submissions', 'talkToSomeone'] && d.get('status', 'Open') != 'Open');
+    }
+    function studentUpdateAllowed(kind, oldData, newData) {
+      return kind in ['emotionalChecks', 'emotional_checkins', 'helpdesk_tickets', 'concern_submissions', 'talkToSomeone']
+        && profile().get('pending_approval', false) == false
+        && studentOwner(oldData) && studentOwner(newData)
+        && oldData.get('recorded_via', '') != 'deep_kiosk'
+        && newData.get('recorded_via', oldData.get('recorded_via', '')) != 'deep_kiosk'
+        && !(kind in ['concern_submissions', 'talkToSomeone'] && newData.get('status', oldData.get('status', 'Open')) != oldData.get('status', 'Open'));
+    }
+    function studentSelfProfileCreate(uid, d) {
+      return signedIn() && request.auth.uid == uid
+        && d.keys().hasOnly(['uid', 'email', 'username', 'first_name', 'last_name', 'role', 'student_id',
+          'section', 'grade_level', 'enrollment_status', 'pending_approval', 'disabled',
+          'parent_name', 'parent_contact', 'parent_email', 'photo_data', 'created_at'])
+        && d.get('uid', uid) == uid
+        && d.role == 'student'
+        && d.get('pending_approval', true) == true
+        && d.get('disabled', false) == false
+        && d.get('section', '') == ''
+        && d.get('enrollment_status', 'pending') in ['pending', 'not_enrolled']
+        && d.student_id is string && d.student_id.size() > 0 && d.student_id.size() <= 20;
+    }
+
+    match /users/{uid} {
+      // Approved teachers and administrators have read access across all student profiles.
+      allow read: if isAdmin() || (active() && request.auth.uid == uid)
+        || (isTeacher() && resource.data.role == 'student');
+      // Students may submit a pending profile request. Only admins approve,
+      // assign sections, or change privileges after creation.
+      allow create: if isAdmin() || studentSelfProfileCreate(uid, request.resource.data);
+      allow update, delete: if isAdmin();
+      match /moods/{date} {
+        allow read: if owner(resource.data) || isStaff();
+        allow create: if (profile().get('pending_approval', false) == false && studentOwner(request.resource.data) && request.auth.uid == uid)
+          || (isStaff() && scoped(request.resource.data) && validStudent(request.resource.data));
+        allow update: if (profile().get('pending_approval', false) == false && studentOwner(resource.data) && studentOwner(request.resource.data) && request.auth.uid == uid)
+          || (isStaff() && scoped(resource.data) && scoped(request.resource.data) && safeUpdate() && validStudent(request.resource.data));
+        allow delete: if isAdmin();
+      }
+    }
+
+    // Explicit allowlist includes deployed legacy names. All other paths default deny.
+    match /{kind}/{id} {
+      // Transactions may check absence before creating a record. No existing data is disclosed.
+      allow get: if kind in ['attendance', 'emotional_checkins', 'careAlerts', 'summativeScores']
+        && isStaff() && !exists(/databases/$(database)/documents/$(kind)/$(id));
+      // Approved teachers and administrators have read access across all classes.
+      allow read: if kind in ['students', 'attendance', 'emotionalChecks', 'emotional_checkins',
+          'enrollments', 'enrollment_requests', 'helpdesk_tickets', 'concern_submissions', 'talkToSomeone', 'intervention_alerts']
+        && (owner(resource.data) || isStaff());
+      // Care alerts contain raw academic evidence and remain staff-only. Use a
+      // separate student-safe summary collection if student-facing alert copy is needed.
+      allow read: if kind == 'careAlerts' && isStaff();
+      // Students can create their own emotional check-ins, concerns, and enrollment requests.
+      allow create: if kind in ['students', 'attendance', 'emotionalChecks', 'emotional_checkins', 'careAlerts',
+          'enrollments', 'enrollment_requests', 'helpdesk_tickets', 'concern_submissions', 'talkToSomeone', 'intervention_alerts']
+        && (studentCreateAllowed(kind, request.resource.data)
+            || (isStaff() && scoped(request.resource.data) && validStudent(request.resource.data)));
+      // Students can update their own emotional check-ins and concerns.
+      allow update: if kind in ['students', 'attendance', 'emotionalChecks', 'emotional_checkins', 'careAlerts',
+          'enrollments', 'enrollment_requests', 'helpdesk_tickets', 'concern_submissions', 'talkToSomeone', 'intervention_alerts']
+        && (studentUpdateAllowed(kind, resource.data, request.resource.data)
+            || (isStaff() && scoped(resource.data) && scoped(request.resource.data) && safeUpdate() && validStudent(request.resource.data)));
+      allow delete: if kind in ['students', 'attendance', 'emotionalChecks', 'emotional_checkins', 'careAlerts',
+          'enrollments', 'enrollment_requests', 'helpdesk_tickets', 'concern_submissions', 'talkToSomeone', 'intervention_alerts'] && isAdmin();
+    }
+
+    match /summativeAssessments/{id} {
+      allow read: if isStaff() || (active() && profile().role == 'student' && resource.data.section == profile().get('section', ''));
+      allow create: if scoped(request.resource.data) && validAssessment(request.resource.data)
+        && (isAdmin() || request.resource.data.teacherId == request.auth.uid);
+      allow update: if scoped(resource.data) && validAssessment(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'subject', 'updatedAt']);
+      allow delete: if isAdmin();
+    }
+
+    // Adviser requirement: scores remain staff-only, including a student's own score.
+    match /summativeScores/{id} {
+      allow read: if isStaff();
+      allow create: if scoped(request.resource.data) && validScore(request.resource.data, id);
+      allow update: if scoped(resource.data) && scoped(request.resource.data) && safeUpdate()
+        && request.resource.data.assessmentId == resource.data.assessmentId && validScore(request.resource.data, id);
+      allow delete: if isAdmin();
+    }
+
+    match /{kind}/{id} {
+      allow read: if kind in ['grades', 'distress_alerts', 'concern_referrals'] && isStaff();
+      allow create: if kind in ['grades', 'distress_alerts', 'concern_referrals'] && scoped(request.resource.data) && validStudent(request.resource.data);
+      allow update: if kind in ['grades', 'distress_alerts', 'concern_referrals'] && scoped(resource.data)
+        && scoped(request.resource.data) && safeUpdate() && validStudent(request.resource.data);
+      allow delete: if kind in ['grades', 'distress_alerts', 'concern_referrals'] && isAdmin();
+      allow read: if kind in ['settings', 'sections'] && active();
+      allow write: if kind in ['settings', 'sections'] && isAdmin();
+      allow read, write: if kind in ['pending_alerts', 'audit_log', 'telegram_users', 'section_counters'] && isAdmin();
+    }
+
+    match /teacher_subjects/{uid} {
+      allow read: if isAdmin() || (isTeacher() && uid == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    match /{kind}/{id} {
+      allow read: if kind in ['notifications', 'scheduledTests'] && (isStaff()
+        || (active() && profile().role == 'student' && resource.data.section == profile().get('section', '')));
+      allow create: if kind in ['notifications', 'scheduledTests'] && scoped(request.resource.data)
+        && request.resource.data.assessmentId == id
+        && existsAfter(/databases/$(database)/documents/summativeAssessments/$(id))
+        && getAfter(/databases/$(database)/documents/summativeAssessments/$(id)).data.section == request.resource.data.section
+        && (isAdmin() || request.resource.data.teacherId == request.auth.uid);
+      allow update, delete: if kind in ['notifications', 'scheduledTests'] && isAdmin();
+    }
+
     function validAssessment(d) {
       return d.keys().hasAll(['teacherId', 'section', 'title', 'subject', 'scheduledDate', 'maxScore', 'thresholdPercent', 'createdAt', 'updatedAt'])
         && d.teacherId is string && d.title is string && d.title.size() > 0 && d.title.size() <= 150
@@ -237,17 +163,7 @@ service cloud.firestore {
         && d.maxScore is number && d.maxScore > 0 && d.maxScore <= 10000
         && d.thresholdPercent is number && d.thresholdPercent >= 0 && d.thresholdPercent <= 100;
     }
-    match /summativeAssessments/{assessmentId} {
-      allow read: if isAdmin() || isTeacher()
-        || (userExists() && resource.data.section == currentUserDoc().data.get('section', ''));
-      allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid
-        && assignedSection(request.resource.data.section) && validAssessment(request.resource.data);
-      // Published grading scales are immutable so saved percentages stay correct.
-      allow update: if isTeacher() && (resource.data.teacherId == request.auth.uid || isAdmin())
-        && assignedSection(resource.data.section) && validAssessment(request.resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'subject', 'updatedAt']);
-      allow delete: if isAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid);
-    }
+
     function validScore(d, scoreId) {
       let a = get(/databases/$(database)/documents/summativeAssessments/$(d.assessmentId)).data;
       return d.keys().hasAll(['assessmentId', 'studentId', 'teacherId', 'section', 'score', 'maxScore', 'thresholdPercent', 'assessmentDate', 'updatedAt'])
@@ -259,40 +175,6 @@ service cloud.firestore {
         && d.section == a.section
         && d.maxScore == a.maxScore && d.thresholdPercent == a.thresholdPercent && d.assessmentDate == a.scheduledDate && d.subject == a.subject
         && d.score is number && d.score >= 0 && d.score <= a.maxScore;
-    }
-    match /summativeScores/{scoreId} {
-      allow read: if isTeacher();
-      allow create: if isTeacher() && validScore(request.resource.data, scoreId);
-      allow update: if isTeacher()
-        && request.resource.data.studentId == resource.data.studentId
-        && request.resource.data.assessmentId == resource.data.assessmentId
-        && validScore(request.resource.data, scoreId);
-      allow delete: if isAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid);
-    }
-    match /notifications/{notifId} {
-      allow read: if signedIn();
-      allow create, update: if isAdmin() || isTeacher();
-      allow delete: if isAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid);
-    }
-
-    match /scheduledTests/{testId} {
-      allow read: if signedIn();
-      allow write: if isAdmin() || isTeacher();
-    }
-
-    match /careAlerts/{alertId} {
-      allow get: if isTeacher() || isAdmin();
-      allow read: if isAdmin() || isTeacher();
-      allow create, update: if isTeacher()
-        && request.resource.data.studentId is string
-        && request.resource.data.status in ['Open', 'Acknowledged', 'Resolved'];
-      allow delete: if isAdmin();
-    }
-
-    match /distress_alerts/{alertId} {
-      allow read: if isAdmin() || isTeacher();
-      allow create, update: if isAdmin() || isTeacher();
-      allow delete: if isAdmin();
     }
   }
 }

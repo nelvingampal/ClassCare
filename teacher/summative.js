@@ -153,7 +153,7 @@
     if (!navigator.onLine) return say('Reconnect before publishing an assessment.');
     const button = $('publish-assessment'); button.disabled = true;
     try {
-      const docRef = db().collection('summativeAssessments').doc();
+      const docRef = ClassCare.collection('summativeAssessments').doc();
       const batch = db().batch();
       batch.set(docRef,{ ...data, teacherId:user.uid,createdAt:stamp(),updatedAt:stamp() });
       // Requirement 2: Save notification to global notifications and scheduledTests collections
@@ -175,8 +175,8 @@
         createdAt: stamp(),
         updatedAt: stamp()
       };
-      batch.set(db().collection('notifications').doc(docRef.id),notifData);
-      batch.set(db().collection('scheduledTests').doc(docRef.id),notifData);
+      batch.set(ClassCare.collection('notifications').doc(docRef.id),notifData);
+      batch.set(ClassCare.collection('scheduledTests').doc(docRef.id),notifData);
       await batch.commit();
 
       say('Assessment published. Students in this section can see the schedule now.');
@@ -185,99 +185,34 @@
     finally { button.disabled = false; }
   };
 
-  // Requirement 1: Holistic Correlation Engine
+  // Requirement 1: Holistic Correlation Engine using evaluateCareAlert
   async function runHolisticCorrelationCheck(savedEntries, a, currentRoster) {
     if (!user || !a || !savedEntries.length) return;
     const passingScore = (a.maxScore * a.thresholdPercent) / 100;
     const belowEntries = savedEntries.filter(([id, val]) => val !== '' && val !== 'invalid' && Number(val) < passingScore);
     if (!belowEntries.length) return;
 
+    const evalFn = (typeof evaluateCareAlert === 'function')
+      ? evaluateCareAlert
+      : (typeof AlertEngine !== 'undefined' && typeof AlertEngine.evaluateCareAlert === 'function' ? AlertEngine.evaluateCareAlert : null);
+
+    if (!evalFn) {
+      console.warn('[correlation-engine] evaluateCareAlert function not available');
+      return;
+    }
+
     for (const [id, val] of belowEntries) {
       const s = currentRoster.find(item => key(item.uid) === id);
       if (!s || !s.uid) continue;
-      const numericScore = Number(val);
 
       try {
-        // A. Check student's recent Emotional Check-in
-        let hasNegativeEmotion = false;
-        let emotionFound = null;
-        try {
-          const emoSnap = await db().collection('emotional_checkins')
-            .where('student_uid', '==', s.uid)
-            .limit(10)
-            .get();
-          const emoDocs = emoSnap.docs.map(d => d.data() || {}).sort((x, y) => String(y.date || '').localeCompare(String(x.date || '')));
-          const latestEmo = emoDocs[0];
-          if (latestEmo) {
-            const rawEmo = String(latestEmo.emotion || '').toLowerCase();
-            const isNeg = latestEmo.is_negative === true
-              || ['sad', 'not_good', 'not good', 'stressed', 'tired', 'down', 'lonely', 'anxious', 'scared', 'angry'].includes(rawEmo)
-              || (Array.isArray(latestEmo.flags) && latestEmo.flags.some(f => ['not_good', 'stressed', 'needs_support', 'not_motivated'].includes(f)));
-            if (isNeg) {
-              hasNegativeEmotion = true;
-              emotionFound = latestEmo.emotion_label || latestEmo.emotion || 'Negative';
-            }
-          }
-        } catch (err) {
-          console.warn('[correlation-engine] emotion query error:', err);
-        }
+        const studentName = ClassCareKioskData.name(s);
+        const result = await evalFn(s.uid, a.section, user);
 
-        // B. Check student's consecutive absences
-        let hasConsecutiveAbsences = false;
-        let consecutiveCount = 0;
-        try {
-          const attSnap = await db().collection('attendance')
-            .where('student_uid', '==', s.uid)
-            .limit(15)
-            .get();
-          const attDocs = attSnap.docs.map(d => d.data() || {}).sort((x, y) => String(y.date || '').localeCompare(String(x.date || '')));
-          for (const doc of attDocs) {
-            const st = String(doc.status || '').toLowerCase();
-            if (st === 'absent') {
-              consecutiveCount++;
-            } else if (st === 'present' || st === 'late') {
-              break;
-            }
-          }
-          if (consecutiveCount >= 2) {
-            hasConsecutiveAbsences = true;
-          }
-        } catch (err) {
-          console.warn('[correlation-engine] attendance query error:', err);
-        }
-
-        // C. The Logic Trigger:
-        // IF (Student's Summative Score < Passing Score) AND (Recent Emotion == 'Sad'/'Not Good' OR consecutive absences)
-        // THEN -> Auto-generate document in careAlerts collection
-        if (hasNegativeEmotion || hasConsecutiveAbsences) {
-          const studentName = ClassCareKioskData.name(s);
-          const alertDocId = `${user.uid}_${s.uid}`;
-          const triggerReason = `Summative Score (${numericScore}/${a.maxScore}) is below passing threshold (${passingScore.toFixed(0)}), correlated with ${hasNegativeEmotion ? 'recent negative emotional check-in ("' + emotionFound + '")' : 'consecutive absences (' + consecutiveCount + ' days absent)'}. Immediate academic and emotional support required.`;
-
-          await db().collection('careAlerts').doc(alertDocId).set({
-            teacherId: user.uid,
-            studentId: s.uid,
-            student_uid: s.uid,
-            studentName: studentName,
-            section: a.section,
-            subject: a.subject,
-            assessmentTitle: a.title,
-            assessmentId: a.id,
-            score: numericScore,
-            maxScore: a.maxScore,
-            passingScore: Number(passingScore.toFixed(1)),
-            status: 'Open',
-            priority: 'High',
-            type: 'holistic_correlation',
-            reason: triggerReason,
-            recentEmotion: emotionFound || null,
-            consecutiveAbsences: consecutiveCount || 0,
-            updatedAt: stamp()
-          });
-
+        if (result && result.created) {
           // Instant dashboard notification
           if (typeof Toast !== 'undefined' && Toast.warn) {
-            Toast.warn(`🚨 Care Alert: ${studentName} scored ${numericScore}/${a.maxScore} (Failing) with ${hasNegativeEmotion ? 'negative emotion ("' + emotionFound + '")' : 'consecutive absences'}! Care alert generated.`);
+            Toast.warn(`🚨 Care Alert: ${studentName} scored ${val}/${a.maxScore} (Failing) with sustained negative emotions! Care alert generated.`);
           }
           if (typeof SoundFeedback !== 'undefined' && SoundFeedback.play) {
             SoundFeedback.play('tap');
@@ -289,13 +224,13 @@
               studentId: s.uid,
               teacherId: user.uid,
               studentName: studentName,
-              reason: triggerReason
+              reason: result.reason
             });
             bc.close();
           }
         }
       } catch (err) {
-        console.warn('[correlation-engine] error for student', s.uid, err);
+        console.warn('[correlation-engine] error evaluating student', s.uid, err);
       }
     }
   }
@@ -313,7 +248,7 @@
       for (let offset = 0; offset < entries.length; offset += 5) {
         const chunk = entries.slice(offset, offset + 5);
         await db().runTransaction(async tx => {
-        const refs = chunk.map(([id]) => db().collection('summativeScores').doc(id));
+        const refs = chunk.map(([id]) => ClassCare.collection('summativeScores').doc(id));
         const current = await Promise.all(refs.map(ref => tx.get(ref)));
         if (token !== generation) throw new Error('Your session changed. Reload before saving.');
         current.forEach((doc, i) => {
@@ -369,8 +304,8 @@
         if ([...sectionSelect.options].some(o => o.value === old)) sectionSelect.value = old;
       }));
     }
-    stops.push(listen(db().collection('summativeAssessments').where('teacherId', '==', user.uid), 'Assessments', snap => { assessments = snap.docs.map(d => ({ ...d.data(), id: d.id })); renderAssessments(); }));
-    stops.push(listen(db().collection('summativeScores').where('teacherId', '==', user.uid), 'Scores', snap => { scores = new Map(snap.docs.map(d => [d.id, d.data()])); renderGrid(); }));
+    stops.push(listen(ClassCare.collection('summativeAssessments').where('teacherId', '==', user.uid), 'Assessments', snap => { assessments = snap.docs.map(d => ({ ...d.data(), id: d.id })); renderAssessments(); }));
+    stops.push(listen(ClassCare.collection('summativeScores').where('teacherId', '==', user.uid), 'Scores', snap => { scores = new Map(snap.docs.map(d => [d.id, d.data()])); renderGrid(); }));
     if ($('assessment-date')) $('assessment-date').value = H.schoolDate();
   });
   window.addEventListener('beforeunload', event => { if (drafts.size) { event.preventDefault(); event.returnValue = ''; } });

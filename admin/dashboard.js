@@ -125,11 +125,15 @@
     if (State.settings?.master_sections && Array.isArray(State.settings.master_sections)) {
       State.settings.master_sections.forEach(s => s && State.sections.add(normalizeSection(s)));
     }
-    updatePendingTeachersUI();
+    updatePendingAccountsUI();
   }
-  function updatePendingTeachersUI() {
+  function isPendingStudent(user) {
+    return user?.role === "student" && (user.pending_approval === true || user.status === "pending" || user.enrollment_status === "pending");
+  }
+  function updatePendingAccountsUI() {
     const pendingTeachers = Array.from(State.teachers.values()).filter(t => t.pending_approval);
-    const count = pendingTeachers.length;
+    const pendingStudents = Array.from(State.students.values()).filter(isPendingStudent);
+    const count = pendingTeachers.length + pendingStudents.length;
     const badge = $("#admin-pending-teachers-badge");
     const banner = $("#admin-pending-teachers-banner");
     const text = $("#admin-pending-teachers-count-text");
@@ -143,9 +147,12 @@
       banner.style.display = count > 0 ? "flex" : "none";
     }
     if (text) {
-      text.textContent = count === 1
-        ? "1 teacher account registered and requires IT administration approval."
-        : `${count} teacher accounts registered and require IT administration approval.`;
+      const parts = [];
+      if (pendingStudents.length) parts.push(`${pendingStudents.length} student ${pendingStudents.length === 1 ? "account request" : "account requests"}`);
+      if (pendingTeachers.length) parts.push(`${pendingTeachers.length} teacher ${pendingTeachers.length === 1 ? "account" : "accounts"}`);
+      text.textContent = count === 0
+        ? "No student or teacher accounts are waiting for approval."
+        : `${parts.join(" and ")} ${count === 1 ? "requires" : "require"} IT administration approval.`;
     }
   }
   function listenUsers() {
@@ -171,7 +178,7 @@
         if (State.settings?.master_sections && Array.isArray(State.settings.master_sections)) {
           State.settings.master_sections.forEach(s => s && State.sections.add(normalizeSection(s)));
         }
-        updatePendingTeachersUI();
+        updatePendingAccountsUI();
         renderTopStats(); renderHeatmap(); renderBarsChart();
         if (window.AdminShared?.initFilters) window.AdminShared.initFilters(State);
       }, error => { console.warn("[admin] users listener failed:", error); });
@@ -251,7 +258,7 @@
       showTab("users");
       const roleSel = $("#users-role");
       if (roleSel) {
-        roleSel.value = "pending_teacher";
+        roleSel.value = "pending";
         roleSel.dispatchEvent(new Event("change"));
       }
     });
@@ -315,13 +322,7 @@
   async function renderMoodChart() {
     if (!window.Chart) return showChartState("#mood-chart-state", "error", "Wellbeing chart unavailable", "Attendance records remain available above.");
     try {
-      const counts = Object.fromEntries(State.last14Days.map(date => [date, 0]));
-      State.attendance.forEach(record => {
-        if (counts[record.date] == null) return;
-        const survey = record.wellbeing_data;
-        const hasEmotion = Boolean(record.emotion || survey?.emotion || (survey && typeof survey === "object" && Object.keys(survey).length > 0));
-        if (hasEmotion) counts[record.date] += 1;
-      });
+      const counts = window.AnalyticsPrivacy.completedByDate(State.attendance.values(), State.last14Days);
       const hasData = Object.values(counts).some(Boolean);
       if (!hasData) return showChartState("#mood-chart-state", "empty", "No wellbeing check-ins yet.", "The chart will populate after students complete their daily check-in.");
       $("#mood-chart-state")?.classList.add("hidden"); $("#mood-chart-wrap")?.classList.remove("hidden");

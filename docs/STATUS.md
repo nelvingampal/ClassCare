@@ -1,5 +1,21 @@
 # ClassCare status — current checkpoint first
 
+## September 15 — hand gesture detection stabilization & verification
+
+Resolved hand detection inaccuracies, network delays, and dwell jitter in both `teacher/scanner.html` and `teacher/deep-check.html`:
+1. **Local Offline-Capable MediaPipe Delivery**: Local assets served with 200 OK (`/teacher/models/vision_bundle.mjs`, `/teacher/models/wasm/vision_wasm_internal.wasm`, `/teacher/models/hand_landmarker.task`), eliminating 73s CDN timeouts.
+2. **Robust 21-Landmark Finger Counter**: Mathematically handles all natural 1–4 finger counting styles (upright index, thumbs-up, peace sign, thumb+index, 3 fingers, thumb+index+middle, 4 upright fingers, and open palm capped at 4) while strictly rejecting fists and resting hands.
+3. **5-Frame Rolling Majority Stabilizer**: Completely prevents webcam frame-drop resets during the 1100ms dwell countdown.
+4. **Visual Glow & Tactile Feedback**: Glowing `.kiosk-choice-btn.ring-2` / `.is-active` / `.cc-hover` and dynamic progress text.
+
+PASS: 24/24 unit tests, in-browser synthetic landmark suite (10/10 poses passed), local asset HTTP 200 checks, in-browser dwell simulation reaching 100% and triggering selection.
+
+## September 14 — strict security audit candidate (not release-ready)
+
+The latest user request supersedes all-class teacher access with exact administrator-managed section assignments and denies student writes. Implemented default-deny rules, App Check initialization, shared native JavaScript route policy, and analytics field projection without visual changes. Scores remain staff-only. See SECURITY_AUDIT_2026-09-14.md for schema requirements and evidence.
+
+PASS: four focused App Check/route/privacy unit tests, three Firestore security groups on cached emulator v1.19.8 (demo-classcare), changed JavaScript syntax checks and whitespace checks. Evidence: test-results/security-rules-verified.log. FAIL: static compatibility audit identifies existing broad teacher queries and student submission workflows incompatible with the strict policy. BLOCKED: partner-owned App Check registration/enforcement and canonical studentId migration; prior offline PII retention remains unresolved. NOT RUN: production, browser workflow, camera/equipment, deployment or merge. This candidate must not be represented as a completed comprehensive PII remediation or ready for rollout.
+
 ## September 14 — focused desktop care-loading repair
 
 Added the missing DB.careAlerts accessor used by the existing teacher listener. This restores its existing collection subscription without changing rules, alert thresholds or schemas. The holistic detail card now distinguishes pending/unavailable records from confirmed no alerts, matching Overview.

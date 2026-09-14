@@ -1,13 +1,85 @@
 {
-  "indexes": [
-    {
-      "collectionGroup": "users",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "role", "order": "ASCENDING" },
-        { "fieldPath": "section", "order": "ASCENDING" }
-      ]
-    }
-  ],
-  "fieldOverrides": []
+    "indexes":  [
+                    {
+                        "collectionGroup":  "users",
+                        "queryScope":  "COLLECTION",
+                        "fields":  [
+                                       {
+                                           "fieldPath":  "role",
+                                           "order":  "ASCENDING"
+                                       },
+                                       {
+                                           "fieldPath":  "section",
+                                           "order":  "ASCENDING"
+                                       }
+                                   ]
+                    },
+                    {
+                        "collectionGroup":  "attendance",
+                        "queryScope":  "COLLECTION",
+                        "fields":  [
+                                       {
+                                           "fieldPath":  "section",
+                                           "order":  "ASCENDING"
+                                       },
+                                       {
+                                           "fieldPath":  "date",
+                                           "order":  "ASCENDING"
+                                       }
+                                   ]
+                    },
+                    {
+                        "collectionGroup":  "emotional_checkins",
+                        "queryScope":  "COLLECTION",
+                        "fields":  [
+                                       {
+                                           "fieldPath":  "section",
+                                           "order":  "ASCENDING"
+                                       },
+                                       {
+                                           "fieldPath":  "date",
+                                           "order":  "ASCENDING"
+                                       }
+                                   ]
+                    },
+                    {
+                        "collectionGroup":  "emotional_checkins",
+                        "queryScope":  "COLLECTION",
+                        "fields":  [
+                                       {
+                                           "fieldPath":  "section",
+                                           "order":  "ASCENDING"
+                                       },
+                                       {
+                                           "fieldPath":  "student_uid",
+                                           "order":  "ASCENDING"
+                                       },
+                                       {
+                                           "fieldPath":  "date",
+                                           "order":  "DESCENDING"
+                                       }
+                                   ]
+                    },
+                    {
+                        "collectionGroup":  "concern_submissions",
+                        "queryScope":  "COLLECTION",
+                        "fields":  [
+                                       {
+                                           "fieldPath":  "studentId",
+                                           "order":  "ASCENDING"
+                                       },
+                                       {
+                                           "fieldPath":  "student_uid",
+                                           "order":  "ASCENDING"
+                                       },
+                                       {
+                                           "fieldPath":  "submitted_at",
+                                           "order":  "DESCENDING"
+                                       }
+                                   ]
+                    }
+                ],
+    "fieldOverrides":  [
+
+                       ]
 }

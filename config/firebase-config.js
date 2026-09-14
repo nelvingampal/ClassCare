@@ -33,13 +33,19 @@ function getFirebase() {
   }
   try {
     _app = firebase.apps?.length ? firebase.app() : firebase.initializeApp(FIREBASE_CONFIG);
+    const syntheticLocal = FIREBASE_CONFIG.projectId === 'demo-classcare'
+      && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
     _auth = firebase.auth();
     _db = firebase.firestore();
-    _auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(error => console.warn("[auth] local persistence unavailable:", error));
-    _db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+    if (syntheticLocal) {
+      _auth.useEmulator('http://127.0.0.1:9099', { disableWarnings: true });
+      _db.useEmulator('127.0.0.1', 8080);
+    }
+    _auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
     return { app: _app, auth: _auth, db: _db };
   } catch (error) {
     _initError = error;
+    _auth = null; _db = null;
     console.error("[firebase-config] Initialization failed:", error);
     return null;
   }
@@ -52,25 +58,30 @@ function requireDb() {
   return services.db;
 }
 
+function collection(name) {
+  const ref = requireDb().collection(name);
+  return window.scopedCollection(ref, _profileValue);
+}
+
 const DB = {
-  get users() { return requireDb().collection("users"); },
-  get attendance() { return requireDb().collection("attendance"); },
-  get enrollments() { return requireDb().collection("enrollments"); },
-  get grades() { return requireDb().collection("grades"); },
-  get helpdesk_tickets() { return requireDb().collection("helpdesk_tickets"); },
+  get users() { return collection("users"); },
+  get attendance() { return collection("attendance"); },
+  get enrollments() { return collection("enrollments"); },
+  get grades() { return collection("grades"); },
+  get helpdesk_tickets() { return collection("helpdesk_tickets"); },
   get settings() { return requireDb().collection("settings").doc("global"); },
-  get pending_alerts() { return requireDb().collection("pending_alerts"); },
-  get audit_log() { return requireDb().collection("audit_log"); },
-  get section_counters() { return requireDb().collection("section_counters"); },
-  get intervention_alerts() { return requireDb().collection("intervention_alerts"); },
-  get emotional_checkins() { return requireDb().collection("emotional_checkins"); },
-  get teacher_subjects() { return requireDb().collection("teacher_subjects"); },
-  get enrollment_requests() { return requireDb().collection("enrollment_requests"); },
-  get concern_submissions() { return requireDb().collection("concern_submissions"); },
-  get talkToSomeone() { return requireDb().collection("talkToSomeone"); },
-  get concern_referrals() { return requireDb().collection("concern_referrals"); },
-  get distress_alerts() { return requireDb().collection("distress_alerts"); },
-  get careAlerts() { return requireDb().collection("careAlerts"); },
+  get pending_alerts() { return collection("pending_alerts"); },
+  get audit_log() { return collection("audit_log"); },
+  get section_counters() { return collection("section_counters"); },
+  get intervention_alerts() { return collection("intervention_alerts"); },
+  get emotional_checkins() { return collection("emotional_checkins"); },
+  get teacher_subjects() { return collection("teacher_subjects"); },
+  get enrollment_requests() { return collection("enrollment_requests"); },
+  get concern_submissions() { return collection("concern_submissions"); },
+  get talkToSomeone() { return collection("talkToSomeone"); },
+  get concern_referrals() { return collection("concern_referrals"); },
+  get distress_alerts() { return collection("distress_alerts"); },
+  get careAlerts() { return collection("careAlerts"); },
   distressAlertDocId(studentUid) { return String(studentUid || ""); },
   attendanceDocId(studentUid, dateIso) { return `${studentUid}_${dateIso}`; },
   enrollmentDocId(studentUid, section, subject) {
@@ -924,10 +935,12 @@ const DB = {
       else if (hasNegEmotion || hasLowGrades) priority = "high";
 
       const payload = {
+        studentId: studentUid,
         student_uid: studentUid,
         student_id: metadata.student_id || student.student_id || "",
         student_name: metadata.student_name || `${student.first_name || ""} ${student.last_name || ""}`.trim() || "Unknown",
         student_section: metadata.section || student.section || "",
+        section: metadata.section || student.section || "",
         teacher_uid: teacherUid,
         teacher_name: metadata.teacher_name || `${teacher.first_name || ""} ${teacher.last_name || ""}`.trim() || "Unknown",
         emotion: emotion,
@@ -1196,6 +1209,11 @@ function onCurrentUser(callback) {
   if (!_profileAuthStop) {
     const services = getFirebase();
     const emit = value => {
+      if (value && (!window.ProtectedRoute || !window.ProtectedRoute(value, location.pathname))) {
+        // Reload destroys listeners, chart state and previously rendered private records.
+        if (/\/(admin|teacher|student)(?:\/|$)/.test(location.pathname)) location.replace('/index.html');
+        value = null;
+      }
       const fingerprint = JSON.stringify(value);
       if (fingerprint === _profileFingerprint) return;
       _profileFingerprint = fingerprint; _profileValue = value;
@@ -1204,9 +1222,13 @@ function onCurrentUser(callback) {
     if (!services?.auth) queueMicrotask(() => emit({ __profileError: _initError?.code || 'service-unavailable' }));
     else _profileAuthStop = services.auth.onAuthStateChanged(fbUser => {
       _profileDocStop?.(); _profileDocStop = null; const token = ++_profileGeneration;
+      emit(null);
       if (!fbUser) return emit(null);
-      _profileDocStop = DB.users.doc(fbUser.uid).onSnapshot(snapshot => {
+      _profileDocStop = DB.users.doc(fbUser.uid).onSnapshot({ includeMetadataChanges: true }, snapshot => {
         if (token !== _profileGeneration) return;
+        // Never authorize from cache or local profile writes. Keep an already
+        // server-verified session through a temporary disconnect so drafts survive.
+        if (snapshot.metadata.fromCache || snapshot.metadata.hasPendingWrites) return;
         if (!snapshot.exists) return emit({ uid: fbUser.uid, email: fbUser.email, __profileError: 'profile-not-found' });
         const data = snapshot.data();
         emit({ ...data, uid: fbUser.uid, email: fbUser.email, role: normalizeRole(data.role), section: data.section || '' });
@@ -1224,6 +1246,8 @@ function onCurrentUser(callback) {
 
 // MODIFIED: Renamed from CampusApp → ClassCare (global API surface)
 window.ClassCare = {
+  collection,
+  canProvisionProfiles: () => _profileValue?.role === 'admin' && !_profileValue.disabled && !_profileValue.__profileError,
   getFirebase, isAvailable: () => !!getFirebase(), DB, onCurrentUser,
   isEnrollmentOpen: DB.isEnrollmentOpen.bind(DB),
   resolveStudentProfile: DB.resolveStudentProfile.bind(DB),

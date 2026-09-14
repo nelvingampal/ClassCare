@@ -1,0 +1,22 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const vm = require('node:vm');
+const fs = require('node:fs');
+test('identity waits for server, preserves drafts on cache metadata, and clears on account change',async()=>{
+ let authNext, profileNext;
+ const auth={setPersistence:()=>Promise.resolve(),useEmulator(){},onAuthStateChanged(next){authNext=next;return()=>{};}};
+ const db={useEmulator(){},collection(){return{doc(){return{onSnapshot(options,next){profileNext=next;return()=>{};}};}};}};
+ const firebase={apps:[],initializeApp:()=>({}),auth:()=>auth,firestore:()=>db};
+ firebase.auth.Auth={Persistence:{SESSION:'session',LOCAL:'local'}};
+ const window={CLASSCARE_CONFIG:{firebase:{apiKey:'demo-key',projectId:'demo-classcare'}},ProtectedRoute:require('../js/protected-route.js'),scopedCollection:ref=>ref};
+ const context={window,firebase,location:{hostname:'localhost',pathname:'/teacher/index.html',replace(){}},console,queueMicrotask};
+ vm.runInNewContext(fs.readFileSync('config/firebase-config.js','utf8'),context);
+ const emitted=[];window.ClassCare.onCurrentUser(user=>emitted.push(user));
+ authNext({uid:'t'});await Promise.resolve();
+ const profile={role:'teacher',pending_approval:false,assigned_sections:['A']};
+ const snapshot=fromCache=>({exists:true,metadata:{fromCache,hasPendingWrites:false},data:()=>profile});
+ profileNext(snapshot(true));await Promise.resolve();assert.equal(emitted.length,1);assert.equal(emitted[0],null);
+ profileNext(snapshot(false));await Promise.resolve();assert.equal(emitted.at(-1).uid,'t');
+ profileNext(snapshot(true));await Promise.resolve();assert.equal(emitted.length,2,'Offline metadata must not destroy an already verified draft');
+ authNext({uid:'another'});await Promise.resolve();assert.equal(emitted.at(-1),null);
+});

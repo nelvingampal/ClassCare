@@ -15,7 +15,11 @@
 
   function getHolisticData() {
     const state = window.TeacherScannerState;
-    return state?.holisticData || {};
+    const data = state?.holisticData || {};
+    return {
+      attendance: (data.attendance || []).map(window.AnalyticsPrivacy.projectCheck),
+      checks: (data.checks || []).map(window.AnalyticsPrivacy.projectCheck)
+    };
   }
 
   function getPeriodStartDate(period) {
@@ -46,7 +50,7 @@
     const allChecks = (holistic.checks || []).filter(r => studentUids.has(r.student_uid) && String(r.date) >= startDate);
 
     // Merge recent check-in entries from TeacherCareState
-    const recentMemoryChecks = (window.TeacherCareState?.recentCheckins || []).filter(r => studentUids.has(r.student_uid) && String(r.date) >= startDate);
+    const recentMemoryChecks = (window.TeacherCareState?.recentCheckins || []).filter(r => studentUids.has(r.student_uid) && String(r.date) >= startDate).map(window.AnalyticsPrivacy.projectCheck);
     const combinedChecks = [...allChecks];
     recentMemoryChecks.forEach(rc => {
       if (!combinedChecks.some(c => c.id === rc.id || (c.student_uid === rc.student_uid && c.date === rc.date))) {

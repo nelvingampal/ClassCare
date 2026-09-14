@@ -883,6 +883,7 @@
       } catch (_) { /* ignore */ }
 
       const payload = {
+        studentId: student.uid,
         student_uid: student.uid,
         student_id: student.student_id || "",
         student_name: `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.email || "Student",
@@ -923,6 +924,7 @@
         const gradeSnap = await ClassCare.DB.grades.doc(gradeDocId).get();
         if (!gradeSnap.exists) {
           await ClassCare.DB.grades.doc(gradeDocId).set({
+            studentId: student.uid,
             student_uid: student.uid,
             student_id: student.student_id || "",
             student_name: payload.student_name,

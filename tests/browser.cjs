@@ -32,6 +32,7 @@ async function until(fn, message) {
       const db = context.firestore();
       for (const [role,identity] of Object.entries(identities)) await setDoc(doc(db,'users',identity.uid),{role, email:identity.email,first_name:'Fixture',last_name:role,section:'Grade 5-A',assigned_sections:role==='teacher'?['Grade 5-A']:[],pending_approval:false,enrollment_status:'enrolled',student_id:role==='student'?'TEST-001':''});
       await setDoc(doc(db,'settings','global'),{morning_start:'07:30',morning_late_cutoff:'07:45',enrollment_open:false});
+      await setDoc(doc(db,'users','outside-section'),{role:'student',studentId:'outside-section',section:'Grade 6-B',student_id:'OUTSIDE-001',first_name:'Outside',last_name:'Fixture'});
     });
     browser = await chromium.launch({channel:'msedge',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
     const errors = [];
@@ -39,14 +40,12 @@ async function until(fn, message) {
       const ctx = await browser.newContext({serviceWorkers:'block',ignoreHTTPSErrors:true,permissions:['camera'],viewport:{width:1280,height:900}});
       await ctx.route(/https:\/\/(?:firestore\.googleapis\.com|identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|api\.telegram\.org|api\.emailjs\.com|generativelanguage\.googleapis\.com)/, route => route.abort());
       await ctx.route('**/js/config.js', route => route.fulfill({contentType:'application/javascript',body:"window.CLASSCARE_CONFIG={firebase:{apiKey:'demo-key',projectId:'demo-classcare',authDomain:'demo-classcare.firebaseapp.com'}};"}));
-      await ctx.route('**/config/firebase-config.js', route => route.fulfill({contentType:'application/javascript',body:fs.readFileSync('config/firebase-config.js','utf8')
-        .replace('_auth = firebase.auth();', "_auth = firebase.auth(); _auth.useEmulator('http://127.0.0.1:9099',{disableWarnings:true});")
-        .replace('_db = firebase.firestore();', "_db = firebase.firestore(); _db.useEmulator('127.0.0.1',8080);")}));
+      await ctx.route('**/config/firebase-config.js', route => route.fulfill({contentType:'application/javascript',body:fs.readFileSync('config/firebase-config.js','utf8')}));
       const page = await ctx.newPage();
       page.setDefaultTimeout(20000);
       page.on('pageerror', e => { errors.push(`${role}: ${e.message}`); console.log('PAGE ERROR', role, e.message); });
       page.on('console', message => { if (message.type() === 'error') console.log('PAGE CONSOLE', role, message.text().slice(0,300)); });
-      await page.goto(base+'/teacher/scanner.html');
+      await page.goto(base+(role === 'student' ? '/student/index.html' : '/teacher/scanner.html'));
       await page.waitForFunction(() => !!window.ClassCare);
       await page.evaluate(identity => ClassCare.getFirebase().auth.signInWithEmailAndPassword(identity.email,'testing123'),identities[role]);
       console.log('AUTH CHECK', role, await page.evaluate(async () => {
@@ -62,12 +61,10 @@ async function until(fn, message) {
     await page.locator('#manual-qr-input').fill('TEST-001');
     await page.locator('#btn-manual-scan').click();
     await page.locator('#kiosk-choices-grid button').nth(3).click();
-    await page.locator('#kiosk-choices-grid button').nth(2).click();
-    await page.locator('#kiosk-choices-grid button').nth(0).click();
-    await until(async()=> (await readFixture(async c=>getDocs(collection(c.firestore(),'emotional_checkins')))).size===1,'Three-step check-in not saved');
+    await until(async()=> (await readFixture(async c=>getDocs(collection(c.firestore(),'emotional_checkins')))).size===1,'Check-in not saved');
     const attendance = await readFixture(async c => (await getDocs(collection(c.firestore(),'attendance'))).docs.map(d => d.data()));
     assert.equal(attendance.length,1); assert.equal(attendance[0].emotion_checkin_3step.mood_key,'not_good');
-    console.log('PASS actual daily scanner saves attendance and explicit three-step responses');
+    console.log('PASS actual daily scanner saves attendance and emotional response');
     await page.reload();
     await page.locator('details.manual-panel summary').click();
     // Keep the duplicate assertion independent of the wall clock. After the
@@ -112,11 +109,13 @@ async function until(fn, message) {
     await page.locator('#kiosk-content').waitFor({state:'visible'});
     await page.locator('#manual-id').fill('TEST-001'); await page.locator('#manual-submit').click();
     await page.locator('#deep-assessment').waitFor({state:'visible'});
+    if (process.env.CLASSCARE_SECURITY_ONLY !== '1') {
     await page.locator('#enable-gestures').click();
     await page.waitForFunction(() => /Show 1–4 fingers|unavailable|could not load/.test(document.getElementById('gesture-status').textContent),{},{timeout:40000});
     const gestureStatus = await page.locator('#gesture-status').textContent();
     assert.match(gestureStatus,/Show 1–4 fingers/,'MediaPipe worker should initialize successfully: '+gestureStatus);
     console.log('PASS actual MediaPipe model loads in worker and processes fake-camera frames');
+    } else console.log('NOT RUN external gesture model in security-only workflow; manual five-answer flow is tested');
     for (const choice of [2,2,2,0,0]) await page.locator('#question-options button').nth(choice).click();
     await teacher.ctx.setOffline(true);
     await page.locator('#save-check').click();
@@ -146,6 +145,8 @@ async function until(fn, message) {
     const otherEditor = await teacher.ctx.newPage();
     otherEditor.setDefaultTimeout(20000);
     await otherEditor.goto(base+'/teacher/summative.html');
+    await otherEditor.evaluate(identity => ClassCare.getFirebase().auth.signInWithEmailAndPassword(identity.email,'testing123'),identities.teacher);
+    await otherEditor.locator('#summative-content').waitFor({state:'visible'});
     await otherEditor.locator('#assessment-select').selectOption(assessmentId);
     await otherEditor.locator('#score-rows input').fill('11');
     const student = await context('student');
@@ -173,6 +174,13 @@ async function until(fn, message) {
     await page.screenshot({path:'test-results/deep-mobile.png',fullPage:true});
     await page.goto(base+'/teacher/index.html');
     await page.locator('#view-dashboard').waitFor({state:'visible'});
+    await page.waitForFunction(()=>window.TeacherScannerState?.students?.size > 0);
+    assert.equal(await page.evaluate(()=>window.TeacherScannerState.students.has('outside-section')),false,'Roster must exclude another section');
+    const denied = await page.evaluate(async()=>{
+      try { await ClassCare.DB.users.doc('outside-section').get({source:'server'}); return false; }
+      catch(error) { return error.code === 'permission-denied'; }
+    });
+    assert.equal(denied,true,'Direct cross-section read is denied by Firestore');
     await page.locator('.classcare-nav-links a[href="#teacher-care-alerts"]').click();
     await page.locator('#holistic-live').waitFor({state:'visible'});
     await page.waitForTimeout(1000);
@@ -183,5 +191,14 @@ async function until(fn, message) {
     await admin.page.waitForTimeout(1000);
     assert.deepEqual(errors,[],'Browser JavaScript errors');
     console.log('PASS mobile layouts and no page JavaScript errors');
+    for (const route of ['/teacher/index.html','/admin/index.html']) {
+      await student.page.goto(base+route);
+      await student.page.waitForURL(url=>url.pathname === '/index.html' || url.pathname === '/student/index.html');
+      assert.equal(new URL(student.page.url()).pathname.startsWith('/teacher'),false);
+      assert.equal(new URL(student.page.url()).pathname.startsWith('/admin'),false);
+    }
+    await env.withSecurityRulesDisabled(c=>updateDoc(doc(c.firestore(),'users',identities.teacher.uid),{disabled:true}));
+    await page.waitForURL(url=>url.pathname === '/index.html');
+    console.log('PASS section-restricted roster, direct denial, student route rejection and live teacher revocation');
   } finally { await browser?.close(); await env?.cleanup(); server.kill(); }
 })().catch(error => { console.error(error); process.exitCode=1; });

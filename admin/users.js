@@ -16,11 +16,23 @@
       select.innerHTML = `<option value="">All sections</option>${options.map(section => `<option value="${escape(section).replace(/"/g, "&quot;")}" ${section === currentVal ? "selected" : ""}>${escape(section)}</option>`).join("")}`;
     }
     const roleSelect = $("#users-role");
+    if (roleSelect && !roleSelect.querySelector('option[value="pending"]')) {
+      const opt = document.createElement("option");
+      opt.value = "pending";
+      opt.textContent = "Pending Approval";
+      roleSelect.insertBefore(opt, roleSelect.querySelector('option[value="admin"]') || null);
+    }
     if (roleSelect && !roleSelect.querySelector('option[value="pending_teacher"]')) {
       const opt = document.createElement("option");
       opt.value = "pending_teacher";
-      opt.textContent = "Pending Teachers (Awaiting Approval)";
-      roleSelect.appendChild(opt);
+      opt.textContent = "Pending Teachers";
+      roleSelect.insertBefore(opt, roleSelect.querySelector('option[value="admin"]') || null);
+    }
+    if (roleSelect && !roleSelect.querySelector('option[value="pending_student"]')) {
+      const opt = document.createElement("option");
+      opt.value = "pending_student";
+      opt.textContent = "Pending Students";
+      roleSelect.insertBefore(opt, roleSelect.querySelector('option[value="admin"]') || null);
     }
     if (!filtersInitialized) {
       filtersInitialized = true;
@@ -265,8 +277,14 @@
     const role = $("#users-role")?.value || "";
     const section = $("#users-section")?.value || "";
     const rows = allUsers(state).filter(user => {
-      if (role === "pending_teacher") {
+      const isPendingStudent = user.role === "student" && (user.pending_approval === true || user.status === "pending" || user.enrollment_status === "pending" || user.enrollment_status === "not_enrolled");
+      const isPendingTeacher = user.role === "teacher" && user.pending_approval === true;
+      if (role === "pending") {
+        if (!isPendingTeacher && !isPendingStudent) return false;
+      } else if (role === "pending_teacher") {
         if (user.role !== "teacher" || !user.pending_approval) return false;
+      } else if (role === "pending_student") {
+        if (!isPendingStudent) return false;
       } else if (role && user.role !== role) {
         return false;
       }

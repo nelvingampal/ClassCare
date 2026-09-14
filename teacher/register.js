@@ -120,6 +120,7 @@
 
   registerForm?.addEventListener("submit", async event => {
     event.preventDefault();
+    if (!ClassCare.canProvisionProfiles()) return Toast.warn('Account creation is managed by your administrator under the current security policy.');
     const termsCheckbox = $("#teacher-terms-checkbox");
     if (!termsCheckbox || !termsCheckbox.checked) {
       event.stopImmediatePropagation();
