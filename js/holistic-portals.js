@@ -7,55 +7,54 @@
   const node = (tag, text, className) => { const el = document.createElement(tag); if (text != null) el.textContent = text; if (className) el.className = className; return el; };
   function cleanup() { generation++; stops.forEach(stop => stop()); stops = []; clearInterval(timer); root?.remove(); root = null; }
   function mount(title) {
-    const host = document.getElementById('view-dashboard') || document.getElementById('summative-content');
+    const host = document.getElementById('teacher-care-alerts') || document.getElementById('summative-content') || document.getElementById('view-dashboard');
     if (!host) return null;
     root = node('section', null, 'cc-card'); root.id = 'holistic-live'; root.append(node('h2', title)); host.prepend(root); return root;
   }
+  function syncOverviewStatus(title, detail) {
+    const status = document.getElementById('overview-care-status');
+    const copy = document.getElementById('overview-care-status-detail');
+    if (status) status.textContent = title;
+    if (copy) copy.textContent = detail;
+  }
   function studentView(user) {
-    const card = mount('Summative assessments'); if (!card) return;
+    const card = mount('Assessment schedule'); if (!card) return;
     const state = node('p', 'Connecting…', 'cc-live'), list = node('div'); card.append(state, list);
-    let assessments = [], scores = [], readiness = new Map();
-    function render() {
-      list.replaceChildren(); state.textContent = [...readiness.values()].every(Boolean) && readiness.size === 2 ? 'Live · confirmed by Firestore' : 'Connecting or showing cached / pending records';
-      const table = node('table', null, 'cc-grid'), head = table.createTHead().insertRow();
-      ['Date', 'Assessment', 'Subject', 'Score'].forEach(label => head.append(node('th', label)));
-      const body = table.createTBody(), scoreMap = new Map(scores.map(s => [s.assessmentId, s]));
-      const all = new Map(assessments.map(a => [a.id, a]));
-      // Preserve a student's historical scores after they move sections.
-      scores.forEach(s => { if (!all.has(s.assessmentId)) all.set(s.assessmentId, { id: s.assessmentId, scheduledDate: s.assessmentDate, subject: s.subject, title: 'Previous section assessment' }); });
-      [...all.values()].sort((a, b) => b.scheduledDate.localeCompare(a.scheduledDate)).forEach(a => {
-        const score = scoreMap.get(a.id), row = body.insertRow();
-        [a.scheduledDate, a.title, a.subject, score ? `${score.score} / ${score.maxScore} (${H.percent(score.score, score.maxScore)?.toFixed(1) ?? '—'}%)` : 'Not graded'].forEach(value => row.insertCell().textContent = value);
+    if (!user.section) { state.textContent = 'Your section has not been assigned yet.'; return; }
+    stops.push(db().collection('summativeAssessments').where('section','==',user.section).onSnapshot({includeMetadataChanges:true}, snap => {
+      state.textContent = snap.metadata.fromCache ? 'Cached schedule' : 'Assessment schedule'; list.replaceChildren();
+      snap.docs.map(d => d.data()).sort((a,b)=>b.scheduledDate.localeCompare(a.scheduledDate)).forEach(a => {
+        list.append(node('p', a.scheduledDate + ' · ' + a.subject + ' · ' + a.title));
       });
-      if (!all.size) list.append(node('p', user.section ? 'No summative assessments scheduled yet.' : 'Your section has not been assigned yet.'));
-      else { const wrap = node('div', null, 'cc-table-wrap'); wrap.append(table); list.append(wrap); }
-    }
-    const listen = (query, name, next) => stops.push(query.onSnapshot({ includeMetadataChanges: true }, snapshot => {
-      readiness.set(name, !snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites); next(snapshot.docs.map(d => ({ ...d.data(), id: d.id }))); render();
-    }, error => { readiness.set(name, false); state.textContent = `${name} unavailable: ${error.message}`; list.replaceChildren(); }));
-    readiness.set('Schedules', false); readiness.set('Scores', false);
-    if (user.section) listen(db().collection('summativeAssessments').where('section', '==', user.section), 'Schedules', rows => { assessments = rows; });
-    else readiness.set('Schedules', true);
-    listen(db().collection('summativeScores').where('studentId', '==', user.uid), 'Scores', rows => { scores = rows; });
+      if (snap.empty) list.append(node('p','No assessments scheduled yet.'));
+    }, () => { state.textContent = 'Schedule unavailable. Please reconnect and try again.'; }));
   }
   function staffView(user) {
     const card = mount('Holistic Care Alerts'); if (!card) return;
     const intro = node('p', 'Recent summative performance below its threshold, combined with a negative emotional flag in the last 14 days.');
     const state = node('p', 'Connecting…', 'cc-live'), list = node('div'); list.setAttribute('aria-live', 'polite');
     card.append(intro, state, list);
-    const token = generation, data = {}, ready = new Map(); let running = false, revision = 0, evaluated = -1;
+    const token = generation, data = {}, ready = new Map(), failures = new Set(); let running = false, revision = 0, evaluated = -1;
     const ownScores = db().collection('summativeScores').where('teacherId', '==', user.uid);
     const ownAlerts = db().collection('careAlerts').where('teacherId', '==', user.uid);
     const names = () => new Map((data.users || []).map(s => [s.id, `${s.first_name || ''} ${s.last_name || ''}`.trim() || s.student_id || 'Student']));
     function render() {
       const students = names(); list.replaceChildren();
       const rows = (data.alerts || []).filter(a => a.status !== 'Resolved');
-      const openCount = rows.filter(a => a.status === 'Open').length;
-      const totalCount = rows.length;
+      if (failures.size) syncOverviewStatus('Care alerts unavailable', 'Reconnect before treating the current alert state as confirmed.');
+      else if (ready.size < 6 || ![...ready.values()].every(Boolean)) syncOverviewStatus('Care alerts awaiting confirmed records', 'Open Care Alerts for the current connection status.');
+      else syncOverviewStatus(
+        rows.length ? `${rows.length} holistic care alert${rows.length === 1 ? ' needs' : 's need'} review` : 'No active holistic care alerts',
+        rows.length ? 'Open Care Alerts to review the evidence and available actions.' : 'Open Care Alerts to review confirmed records and student requests.'
+      );
 
       // Dispatch live data for listeners without clobbering teacher scanner DOM elements
 
-      if (!rows.length) list.append(node('p', 'No active holistic care alerts.'));
+      if (!rows.length) list.append(node('p', failures.size
+        ? 'Care alerts unavailable. Reconnect before checking for active alerts.'
+        : ready.size < 6 || ![...ready.values()].every(Boolean)
+          ? 'Waiting for confirmed records before checking for active alerts.'
+          : 'No active holistic care alerts.'));
       rows.forEach(alert => {
         const item = node('article', null, 'cc-alert');
         item.append(node('strong', `Intervention Needed: ${students.get(alert.studentId) || alert.studentName || 'Student'} has low performance and recent negative emotional flags.`));
@@ -103,13 +102,15 @@
       ready.set(name, false);
       stops.push(query.onSnapshot({ includeMetadataChanges: true }, snapshot => {
         if (token !== generation) return;
+        failures.delete(name);
         ready.set(name, !snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites);
         data[name] = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
-        state.textContent = [...ready.values()].every(Boolean) ? 'Live · correlation listener active in this staff session' : 'Waiting for confirmed records; correlation paused';
+        const confirmed = [...ready.values()].every(Boolean);
+        state.textContent = confirmed ? 'Live · correlation listener active in this staff session' : 'Waiting for confirmed records; correlation paused';
         render();
         window.dispatchEvent(new CustomEvent('classcare:live-data', { detail: data }));
         if (affectsEngine) revision++; void evaluate();
-      }, error => { ready.set(name, false); state.textContent = `${name} unavailable: ${error.message}. Correlation paused.`; }));
+      }, error => { if (token !== generation) return; failures.add(name); ready.set(name, false); state.textContent = `${name} unavailable: ${error.message}. Correlation paused.`; render(); }));
     };
     listen(ownScores, 'scores');
     const cutoff = H.schoolDate(new Date(Date.now() - 14 * 86400000));
@@ -121,7 +122,7 @@
     timer = setInterval(() => { revision++; void evaluate(); }, 60000); // Expire old evidence even if no document changes.
   }
   const stopAuth = ClassCare.onCurrentUser(user => {
-    cleanup(); if (!user || user.__profileError) return;
+    cleanup(); if (!user || user.__profileError || user.disabled || (user.role === 'teacher' && user.pending_approval !== false)) return;
     if (user.role === 'student') studentView(user);
     else if (['teacher', 'admin'].includes(user.role)) staffView(user);
   });

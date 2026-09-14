@@ -25,7 +25,7 @@
   <script src="../js/chatbot.js" defer></script>
   <script src="./register.js" defer></script>
   <script src="./dashboard.js" defer></script>
-  <script src="./grades.js" defer></script>
+
   <script src="./enrollment.js" defer></script>
   <script src="./emotional-checkin.js" defer></script>
   <script src="./concern.js" defer></script>
@@ -302,10 +302,7 @@
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg>
             <span>Attendance</span>
           </a>
-          <a class="classcare-nav-item nav-link" href="#student-grades" id="nav-student-grades">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            <span>Grades</span>
-          </a>
+
           <a class="classcare-nav-item nav-link" href="#student-concern" id="nav-student-concern">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22C6.48 22 2 17.52 2 12S6.48 2 12 2s10 4.48 10 10-4.48 10-10 10zm0-18C7.59 4 4 7.59 4 12s3.59 8 8 8 8-3.59 8-8-3.59-8-8-8zm-1 5h2v6h-2zm0 8h2v2h-2z"/></svg>
             <span>Talk to Someone</span>
@@ -350,7 +347,7 @@
         <a class="nav-link" href="#student-concern">Talk to Someone</a>
         <a class="nav-link" href="#student-id">Student ID &amp; QR</a>
         <a class="nav-link" href="#student-attendance">Attendance</a>
-        <a class="nav-link" href="#student-grades">Subjects &amp; Grades</a>
+
         <a class="nav-link" href="#student-enrollment">Enrollment</a>
         <a class="nav-link" href="#student-profile">My Profile</a>
         <a class="nav-link" href="#student-help">Help request</a>
@@ -377,7 +374,7 @@
             <strong id="summative-alert-title" style="color:var(--c-primary);font-size:0.95rem;display:block;">Upcoming Summative Test Scheduled</strong>
             <span id="summative-alert-message" style="font-size:0.85rem;color:var(--text-secondary);">Your teacher has posted an assessment schedule.</span>
           </div>
-          <a href="#student-grades" class="btn btn-primary btn-sm" style="font-size:0.8rem;padding:6px 14px;white-space:nowrap;">View Scores &amp; Schedule →</a>
+
         </div>
 
         <!-- TAB 1: Emotion Check-in & Self-Reflection -->
@@ -426,7 +423,7 @@
           <div class="page-header" id="student-id"><div><h1 id="student-page-title" class="page-title">Student ID</h1><p class="page-subtitle">Show this QR code to your teacher during class arrival.</p></div><div class="page-actions"><button id="btn-dl-qr" class="btn btn-secondary"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Download QR</button><button id="btn-dl-id" class="btn btn-primary"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Download ID</button></div></div>
           <div id="id-card-3d-wrap" class="id-card-shell">
             <div id="id-card-inner" class="student-id-card" style="width:320px!important;min-width:320px!important;max-width:320px!important;min-height:535px!important;box-sizing:border-box;background:#ffffff;border-radius:20px;overflow:hidden;border:1px solid #cbd5e1;display:flex;flex-direction:column;align-items:center;padding:0;box-shadow:0 10px 25px -5px rgba(0,0,0,0.08);">
-              
+
               <!-- Header: ClassCare branding with pastel-colored banner background -->
               <div class="id-card-top" style="width:100%;box-sizing:border-box;padding:12px 16px;background:linear-gradient(135deg, #e0e7ff 0%, #ede9fe 50%, #fce7f3 100%);border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
                 <div style="display:flex;align-items:center;gap:8px;">
@@ -444,13 +441,13 @@
 
               <!-- Body: Centered profile picture, Student Name, Status, and Details -->
               <div class="id-card-body" style="width:100%;display:flex;flex-direction:column;align-items:center;padding:0 16px;box-sizing:border-box;">
-                
+
                 <!-- Fixed, absolute dimensions profile picture container with rounded-full and shadow -->
                 <div id="id-avatar" class="id-photo" style="width:84px!important;height:84px!important;min-width:84px!important;min-height:84px!important;max-width:84px!important;max-height:84px!important;border-radius:9999px!important;border:3.5px solid #ffffff!important;box-shadow:0 4px 14px rgba(0,0,0,0.12)!important;overflow:hidden!important;background:#f1f5f9;margin:12px auto 4px!important;display:flex!important;align-items:center!important;justify-content:center!important;color:#4f46e5;font-weight:800;font-size:26px;box-sizing:border-box;">S</div>
 
                 <!-- Student Name (normal line-height, no overflow hidden, full visibility) -->
                 <h2 id="id-name" class="id-name" style="font-size:18px;font-weight:800;color:#0f172a;text-align:center;margin:4px 0 0;line-height:1.3;padding:0 8px;white-space:nowrap;overflow:visible;">Student</h2>
-                
+
                 <!-- Status Badge -->
                 <div id="id-status" class="id-status" style="margin:4px auto 0;text-align:center;display:flex;justify-content:center;"><span class="status-badge status-not-recorded">Not Enrolled</span></div>
 
@@ -495,61 +492,7 @@
         </div>
 
         <!-- TAB 5: Grades & Subjects -->
-        <div id="tab-student-grades" class="student-tab-panel hidden">
-          <section id="student-grades" class="card">
-            <div class="card-header">
-              <div>
-                <h2 class="card-title">Subjects &amp; Grades</h2>
-                <p class="card-subtitle">Your enrolled subjects and term grades, updated in real-time.</p>
-              </div>
-              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                <span class="status-badge status-present" id="student-grades-count">0 Subjects</span>
-                <button id="btn-print-grades" class="btn btn-secondary btn-sm" type="button" style="display:inline-flex;align-items:center;gap:6px;">
-                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                  Print Report Card
-                </button>
-              </div>
-            </div>
-            <div class="table-wrap">
-              <table class="data">
-                <thead><tr><th>Subject</th><th>Grade &amp; Section</th><th>Teacher</th><th style="width:75px;text-align:center;">1st Term</th><th style="width:75px;text-align:center;">2nd Term</th><th style="width:75px;text-align:center;">3rd Term</th><th style="width:75px;text-align:center;">4th Term</th><th style="width:85px;text-align:center;">Final Grade</th><th style="width:115px;text-align:center;">Remarks</th></tr></thead>
-                <tbody id="student-grades-tbody"><tr><td colspan="9"><div class="state-panel state-loading"><strong>Loading subjects&hellip;</strong></div></td></tr></tbody>
-              </table>
-            </div>
-          </section>
-
-          <!-- Requirement 2: Confidential Summative Assessment Scores (Private onSnapshot) -->
-          <section id="student-summative-grades-card" class="card" style="margin-top:24px;">
-            <div class="card-header">
-              <div>
-                <h2 class="card-title">My Summative Assessment Scores</h2>
-                <p class="card-subtitle">Confidential individual test scores and passing evaluations, updated in real time.</p>
-              </div>
-              <span class="status-badge status-present" style="display:inline-flex;align-items:center;gap:4px;">
-                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                Strictly Confidential
-              </span>
-            </div>
-            <div class="table-wrap">
-              <table class="data">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Subject</th>
-                    <th>Assessment Title</th>
-                    <th style="text-align:center;width:90px;">My Score</th>
-                    <th style="text-align:center;width:90px;">Passing Min</th>
-                    <th style="text-align:center;width:90px;">Percentage</th>
-                    <th style="text-align:center;width:120px;">Evaluation</th>
-                  </tr>
-                </thead>
-                <tbody id="student-summative-tbody">
-                  <tr><td colspan="7"><div class="state-panel state-empty"><strong>No summative test records yet.</strong><span>Your individual scores will appear here when your teacher records assessments.</span></div></td></tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </div>
+        <!-- Scores are staff-only. -->
 
         <!-- TAB 6: Enrollment Pre-enlistment -->
         <div id="tab-student-enrollment" class="student-tab-panel hidden">
@@ -640,29 +583,6 @@
   </div>
 
   <div id="photo-camera-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="photo-camera-title"><div class="modal-backdrop" data-close-camera></div><div class="modal-card"><div class="modal-header"><div><h2 id="photo-camera-title" class="modal-title">Take student photo</h2><p class="modal-copy">Keep your face inside the frame.</p></div><button type="button" id="btn-close-camera" class="modal-close-btn" aria-label="Close camera"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><video id="photo-camera-video" class="camera-preview" autoplay playsinline></video><p id="photo-camera-status" class="field-help">Allow camera access to continue.</p><div class="form-actions"><button type="button" id="btn-cancel-camera" class="btn btn-secondary">Cancel</button><button type="button" id="btn-capture-photo" class="btn btn-primary">Capture photo</button></div></div></div>
-  <!-- Official DepEd Student Report Card / Grade Slip Modal -->
-  <div id="print-grade-slip-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="grade-slip-title">
-    <div class="modal-backdrop" data-close-grade-slip></div>
-    <div class="modal-card grade-slip-modal-card" style="max-width:760px;width:95vw;max-height:90vh;overflow-y:auto;">
-      <div class="modal-header">
-        <div>
-          <h2 id="grade-slip-title" class="modal-title">Student Progress Report Card</h2>
-          <p class="modal-copy">Official DepEd Form 137 Grading Sheet</p>
-        </div>
-        <button type="button" class="modal-close-btn" data-close-grade-slip aria-label="Close modal">×</button>
-      </div>
-      <div id="grade-slip-printable" class="grade-slip-sheet" style="padding:1rem 0;">
-        <!-- Populated dynamically by student/grades.js -->
-      </div>
-      <div class="form-actions" style="margin-top:1rem;display:flex;justify-content:flex-end;gap:10px;">
-        <button type="button" class="btn btn-secondary" data-close-grade-slip>Close</button>
-        <button type="button" id="btn-do-print-slip" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:6px;">
-          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-          Print / Save as PDF
-        </button>
-      </div>
-    </div>
-  </div>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const tabMap = {
@@ -670,7 +590,6 @@
         "#student-reflection": "tab-student-emotion",
         "#student-id": "tab-student-id",
         "#student-attendance": "tab-student-attendance",
-        "#student-grades": "tab-student-grades",
         "#student-concern": "tab-student-concern",
         "#student-enrollment": "tab-student-enrollment",
         "#student-profile": "tab-student-profile",

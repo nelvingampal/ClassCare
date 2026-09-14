@@ -70,6 +70,7 @@ const DB = {
   get talkToSomeone() { return requireDb().collection("talkToSomeone"); },
   get concern_referrals() { return requireDb().collection("concern_referrals"); },
   get distress_alerts() { return requireDb().collection("distress_alerts"); },
+  get careAlerts() { return requireDb().collection("careAlerts"); },
   distressAlertDocId(studentUid) { return String(studentUid || ""); },
   attendanceDocId(studentUid, dateIso) { return `${studentUid}_${dateIso}`; },
   enrollmentDocId(studentUid, section, subject) {

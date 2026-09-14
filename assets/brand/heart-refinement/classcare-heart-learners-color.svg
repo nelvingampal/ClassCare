@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="24 18 208 194" role="img" aria-labelledby="title desc">
+  <title id="title">ClassCare heart and learners symbol — color</title>
+  <desc id="desc">Flat heart enclosure with two learners and one shared support line.</desc>
+  <path d="M128 196 C104 176 42 139 42 88 C42 55 64 35 93 35 C109 35 121 44 128 58 C135 44 147 35 163 35 C192 35 214 55 214 88 C214 139 152 176 128 196 Z" fill="none" stroke="#63B9EA" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="102" cy="80" r="12" fill="#17364D"/>
+  <path d="M78 132 C80 112 89 102 102 102 C115 102 124 112 126 132 Z" fill="#17364D"/>
+  <circle cx="154" cy="80" r="12" fill="#17364D"/>
+  <path d="M130 132 C132 112 141 102 154 102 C167 102 176 112 178 132 Z" fill="#17364D"/>
+  <path d="M74 151 C95 169 161 169 182 151" fill="none" stroke="#F2B93B" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

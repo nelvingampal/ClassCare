@@ -24,51 +24,9 @@
   }
 
   function canScanSync(user, student) {
-    if (!user) return false;
-    if (user.role === 'admin') return true;
-    if (user.role !== 'teacher' || user.disabled) return false;
-    if (!student) return false;
-
-    const teacherSections = [
-      user.section,
-      user.preferred_section,
-      ...(Array.isArray(user.assigned_sections) ? user.assigned_sections : [])
-    ].filter(Boolean);
-
-    if (teacherSections.length > 0 && student.section) {
-      if (teacherSections.some(sec => sectionMatches(sec, student.section))) return true;
-    }
-    if (typeof window !== 'undefined' && window.State) {
-      if (window.State.section && student.section && sectionMatches(window.State.section, student.section)) return true;
-      if (window.State.students && student.uid && window.State.students.has(student.uid)) return true;
-    }
-    if (teacherSections.length === 0) return true;
-    return false;
+    return !!user && !user.disabled && !!student && (user.role === 'admin' || (user.role === 'teacher' && user.pending_approval === false));
   }
-
-  async function canScan(user, student) {
-    if (canScanSync(user, student)) return true;
-    try {
-      if (typeof ClassCare !== 'undefined' && ClassCare.DB?.enrollments && user?.uid && student?.uid) {
-        const enrSnap = await ClassCare.DB.enrollments
-          .where('teacher_uid', '==', user.uid)
-          .where('student_uid', '==', student.uid)
-          .limit(1)
-          .get();
-        if (!enrSnap.empty) return true;
-
-        if (student.section) {
-          const secSnap = await ClassCare.DB.enrollments
-            .where('teacher_uid', '==', user.uid)
-            .where('section', '==', student.section)
-            .limit(1)
-            .get();
-          if (!secSnap.empty) return true;
-        }
-      }
-    } catch (_) {}
-    return false;
-  }
+  async function canScan(user, student) { return canScanSync(user, student); }
 
   async function lookup(raw, user) {
     let uid, sid;
@@ -116,15 +74,15 @@
 
     if (!student || String(student.role).toLowerCase() !== 'student') throw new Error('Student ID was not found.');
     if (sid && sid !== text && student.student_id && student.student_id !== sid) throw new Error('QR student ID does not match the profile.');
-    if (!(await canScan(user, student))) throw new Error('This student is not in one of your assigned sections.');
+    if (!(await canScan(user, student))) throw new Error('Approved staff access is required.');
     return student;
   }
 
   async function saveAttendance(student, user, mood, settings = {}, assignment = null) {
     if (!navigator.onLine) throw new Error('You are offline. Reconnect and retry; attendance has not been saved.');
-    if (!(await canScan(user, student))) throw new Error('Student is outside your assigned sections.');
+    if (!(await canScan(user, student))) throw new Error('Approved staff access is required.');
     const emotion = H.MOODS.find(m => m.key === mood);
-    if (!emotion) throw new Error('Choose a mood.');
+    if (mood !== null && !emotion) throw new Error('Choose a mood or skip the optional check-in.');
     const date = H.schoolDate(), time = H.schoolTime();
     const ref = ClassCare.DB.attendance.doc(ClassCare.DB.attendanceDocId(student.uid, date));
     return ClassCare.getFirebase().db.runTransaction(async tx => {
@@ -149,12 +107,12 @@
         status: evaluation.status,
         minutes_late: evaluation.minutes_late || 0,
         scanned_by: user.uid,
-        recorded_via: 'attendance_kiosk',
+        recorded_via: 'attendance_kiosk', checkin_skipped: mood === null,
         emotion: mood,
         mood,
-        emotion_label: emotion.label,
-        emotion_emoji: emotion.emoji,
-        is_negative: !!emotion.negative,
+        emotion_label: emotion?.label || 'Not provided',
+        emotion_emoji: emotion?.emoji || '',
+        is_negative: !!emotion?.negative,
         subject: assignment?.subject || '',
         scanned_at: stamp()
       };
@@ -166,11 +124,11 @@
   function fastMood(student, user, settings, assignment) {
     return new Promise(resolve => {
       const dialog = document.createElement('dialog'); dialog.className = 'cc-mood-dialog';
-      dialog.innerHTML = '<h2>How are you feeling today?</h2><p class="cc-student"></p><p style="text-align:center;font-size:0.88rem;color:var(--text-muted);margin:-12px 0 18px;">Tap an emoji to record your arrival & emotional vibe</p><div class="cc-options"></div><p role="status" aria-live="polite" class="cc-status" style="width:100%;text-align:center;"></p><button type="button" class="btn cc-cancel">Cancel check-in</button>';
+      dialog.innerHTML = '<h2>How are you feeling today?</h2><p class="cc-student"></p><p style="text-align:center;font-size:0.88rem;color:var(--text-muted);margin:-12px 0 18px;">You may answer or skip this optional check-in.</p><div class="cc-options"></div><p role="status" aria-live="polite" class="cc-status" style="width:100%;text-align:center;"></p><button type="button" class="btn cc-cancel">Cancel check-in</button>';
       dialog.querySelector('.cc-student').textContent = name(student);
       let saving = false;
       const finish = result => { dialog.close(); dialog.remove(); resolve(result); };
-      H.MOODS.forEach(mood => {
+      [...H.MOODS, {key:null, emoji:'',label:'Skip check-in and record attendance'}].forEach(mood => {
         const button = document.createElement('button'); button.type = 'button';
         button.className = `cc-option cc-mood-btn cc-mood-${mood.key}`;
         button.setAttribute('data-mood', mood.key);
@@ -201,7 +159,7 @@
 
   async function saveDeep(student, user, answers, id) {
     if (!navigator.onLine) throw new Error('Reconnect before saving this assessment.');
-    if (!(await canScan(user, student))) throw new Error('Student is outside your assigned sections.');
+    if (!(await canScan(user, student))) throw new Error('Approved staff access is required.');
     const result = H.summarize(answers);
     await ClassCare.DB.emotional_checkins.doc(id).set({
       ...result,

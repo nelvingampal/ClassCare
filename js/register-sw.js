@@ -71,16 +71,10 @@
           BackgroundSync task after writing a pending record. ---- */
   // MODIFIED: CampusSW → ClassCareSW
   window.ClassCareSW = {
-    async requestSync(tag = "classcare-sync") {
-      if (!("serviceWorker" in navigator) || !("SyncManager" in window)) return false;
-      try {
-        const reg = await navigator.serviceWorker.ready;
-        await reg.sync.register(tag);
-        return true;
-      } catch (err) {
-        console.info("[sw] BackgroundSync registration failed (normal in Firefox):", err);
-        return false;
-      }
+    async requestSync() {
+      // Queue writes require the signed-in foreground page; no background replay.
+      if (window.OfflineSync && navigator.onLine) await window.OfflineSync.flushAll();
+      return false;
     },
     async postMessage(msg) {
       try {

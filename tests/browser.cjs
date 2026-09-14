@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 const { chromium } = require('playwright');
 const { initializeTestEnvironment } = require('@firebase/rules-unit-testing');
-const { doc, setDoc, getDocs, collection, updateDoc } = require('firebase/firestore');
+const { doc, setDoc, getDocs, collection, updateDoc, deleteDoc } = require('firebase/firestore');
 const H = require('../js/holistic-core.js');
 const base = 'http://127.0.0.1:5599';
 async function until(fn, message) {
@@ -33,10 +33,11 @@ async function until(fn, message) {
       for (const [role,identity] of Object.entries(identities)) await setDoc(doc(db,'users',identity.uid),{role, email:identity.email,first_name:'Fixture',last_name:role,section:'Grade 5-A',assigned_sections:role==='teacher'?['Grade 5-A']:[],pending_approval:false,enrollment_status:'enrolled',student_id:role==='student'?'TEST-001':''});
       await setDoc(doc(db,'settings','global'),{morning_start:'07:30',morning_late_cutoff:'07:45',enrollment_open:false});
     });
-    browser = await chromium.launch({channel:'chrome',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
+    browser = await chromium.launch({channel:'msedge',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
     const errors = [];
     async function context(role) {
-      const ctx = await browser.newContext({ignoreHTTPSErrors:true,permissions:['camera'],viewport:{width:1280,height:900}});
+      const ctx = await browser.newContext({serviceWorkers:'block',ignoreHTTPSErrors:true,permissions:['camera'],viewport:{width:1280,height:900}});
+      await ctx.route(/https:\/\/(?:firestore\.googleapis\.com|identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|api\.telegram\.org|api\.emailjs\.com|generativelanguage\.googleapis\.com)/, route => route.abort());
       await ctx.route('**/js/config.js', route => route.fulfill({contentType:'application/javascript',body:"window.CLASSCARE_CONFIG={firebase:{apiKey:'demo-key',projectId:'demo-classcare',authDomain:'demo-classcare.firebaseapp.com'}};"}));
       await ctx.route('**/config/firebase-config.js', route => route.fulfill({contentType:'application/javascript',body:fs.readFileSync('config/firebase-config.js','utf8')
         .replace('_auth = firebase.auth();', "_auth = firebase.auth(); _auth.useEmulator('http://127.0.0.1:9099',{disableWarnings:true});")
@@ -57,21 +58,56 @@ async function until(fn, message) {
     const teacher = await context('teacher');
     const page = teacher.page;
     await page.locator('#kiosk-content').waitFor({state:'visible'});
-    await page.locator('#manual-id').fill('TEST-001');
-    await page.locator('#manual-submit').click();
-    console.log('KIOSK STATUS', await page.locator('#kiosk-status').textContent());
-    await page.getByRole('button',{name:'😣 Stressed',exact:true}).click();
-    console.log('MOOD CLICKED', await page.locator('#kiosk-status').textContent());
-    await page.waitForFunction(() => document.getElementById('kiosk-status').textContent.includes('Attendance and mood saved'));
+    await page.locator('details.manual-panel summary').click();
+    await page.locator('#manual-qr-input').fill('TEST-001');
+    await page.locator('#btn-manual-scan').click();
+    await page.locator('#kiosk-choices-grid button').nth(3).click();
+    await page.locator('#kiosk-choices-grid button').nth(2).click();
+    await page.locator('#kiosk-choices-grid button').nth(0).click();
+    await until(async()=> (await readFixture(async c=>getDocs(collection(c.firestore(),'emotional_checkins')))).size===1,'Three-step check-in not saved');
     const attendance = await readFixture(async c => (await getDocs(collection(c.firestore(),'attendance'))).docs.map(d => d.data()));
-    assert.equal(attendance.length,1); assert.equal(attendance[0].emotion,'stressed');
-    console.log('PASS daily kiosk saves one attendance record with chosen mood');
+    assert.equal(attendance.length,1); assert.equal(attendance[0].emotion_checkin_3step.mood_key,'not_good');
+    console.log('PASS actual daily scanner saves attendance and explicit three-step responses');
     await page.reload();
-    await page.locator('#manual-id').fill('TEST-001'); await page.locator('#manual-submit').click();
-    await page.getByRole('button',{name:'😊 Happy',exact:true}).click();
-    await page.waitForFunction(() => /already recorded|Time out saved/.test(document.getElementById('kiosk-status').textContent));
+    await page.locator('details.manual-panel summary').click();
+    // Keep the duplicate assertion independent of the wall clock. After the
+    // configured afternoon time-out window, a real second scan is expected to
+    // record time-out rather than return the duplicate path.
+    await page.evaluate(()=>{
+      window.originalDuplicateEvaluate=Utils.computeHierarchicalAttendance;
+      Utils.computeHierarchicalAttendance=()=>({action:'time_in',status:'Present',minutes_late:0});
+    });
+    await page.locator('#manual-qr-input').fill('TEST-001'); await page.locator('#btn-manual-scan').click();
+    await until(async()=> /Already recorded|Time Out/.test(await page.locator('#scan-status-label').textContent()),'Duplicate scan did not finish');
     assert.equal((await readFixture(async c => getDocs(collection(c.firestore(),'attendance')))).size,1);
+    await page.evaluate(()=>{Utils.computeHierarchicalAttendance=window.originalDuplicateEvaluate;});
     console.log('PASS duplicate scans do not create another daily record');
+    await page.evaluate(()=>{
+      window.originalEvaluate=Utils.computeHierarchicalAttendance;
+      Utils.computeHierarchicalAttendance=()=>({action:'time_out',status:'Present',minutes_late:0});
+      const db=ClassCare.getFirebase().db;window.originalTransaction=db.runTransaction.bind(db);
+      db.runTransaction=async()=>{throw Error('Synthetic transaction failure');};
+    });
+    await page.locator('#manual-qr-input').fill('TEST-001');await page.locator('#btn-manual-scan').click();
+    await page.getByText('Attendance not saved',{exact:true}).first().waitFor();
+    assert.equal((await readFixture(async c=>(await getDocs(collection(c.firestore(),'attendance'))).docs[0].data())).time_out,undefined);
+    await page.evaluate(()=>{ClassCare.getFirebase().db.runTransaction=window.originalTransaction;});
+    await page.locator('#manual-qr-input').fill('TEST-001');await page.locator('#btn-manual-scan').click();
+    await until(async()=>!!(await readFixture(async c=>(await getDocs(collection(c.firestore(),'attendance'))).docs[0].data())).time_out,'Retried time-out not saved');
+    await page.evaluate(()=>{Utils.computeHierarchicalAttendance=window.originalEvaluate;});
+    console.log('PASS failed time-out shows failure without changing records; retry writes time-out');
+    // Reset only synthetic daily attendance to exercise a fresh skipped check-in.
+    await env.withSecurityRulesDisabled(async c=>{for(const d of (await getDocs(collection(c.firestore(),'attendance'))).docs)await deleteDoc(d.ref);});
+    await page.reload();await page.locator('details.manual-panel summary').click();
+    const beforeSkip=(await readFixture(c=>getDocs(collection(c.firestore(),'emotional_checkins')))).size;
+    await page.locator('#manual-qr-input').fill('TEST-001');await page.locator('#btn-manual-scan').click();
+    await page.locator('#btn-skip-emotion').click();
+    await page.locator('#emotion-overlay').waitFor({state:'hidden'});
+    const skipped=await readFixture(async c=>(await getDocs(collection(c.firestore(),'attendance'))).docs[0].data());
+    assert.equal(skipped.checkin_skipped,true);assert.equal(skipped.emotion,null);
+    assert.equal((await readFixture(c=>getDocs(collection(c.firestore(),'emotional_checkins')))).size,beforeSkip);
+    console.log('PASS skip preserves attendance without inventing a response');
+
     await page.goto(base+'/teacher/deep-check.html');
     await page.locator('#kiosk-content').waitFor({state:'visible'});
     await page.locator('#manual-id').fill('TEST-001'); await page.locator('#manual-submit').click();
@@ -90,7 +126,7 @@ async function until(fn, message) {
     await page.locator('#save-check').click();
     await page.waitForFunction(() => document.getElementById('kiosk-status').textContent.includes('Assessment saved'));
     const checks = await readFixture(async c => (await getDocs(collection(c.firestore(),'emotional_checkins'))).docs.map(d=>d.data()));
-    assert.equal(checks.length,1); assert.equal(Object.keys(checks[0].answers).length,5);
+    assert.equal(checks.length,2); assert.equal(Object.keys(checks.find(c=>c.recorded_via==='deep_kiosk').answers).length,5);
     assert.equal((await readFixture(async c => getDocs(collection(c.firestore(),'attendance')))).size,1);
     console.log('PASS deep kiosk saves five answers independently of attendance and resets');
     await page.goto(base+'/teacher/summative.html');
@@ -100,6 +136,7 @@ async function until(fn, message) {
     await page.waitForFunction(() => document.getElementById('assessment-select').options.length>1);
     const assessmentId = await page.locator('#assessment-select option').nth(1).getAttribute('value');
     await page.locator('#assessment-select').selectOption(assessmentId);
+    await page.waitForFunction(() => document.getElementById('score-live')?.textContent.includes('Live · confirmed by Firestore'));
     await page.locator('#score-rows input').fill('10'); await page.locator('#save-scores').click();
     await page.waitForFunction(() => document.getElementById('score-status').textContent.includes('score changes saved'));
     await page.getByText(/Intervention Needed: Fixture student/).waitFor();
@@ -114,15 +151,16 @@ async function until(fn, message) {
     const student = await context('student');
     await student.page.goto(base+'/student/index.html');
     await student.page.locator('#holistic-live').waitFor({state:'visible'});
-    await student.page.getByText('10 / 20 (50.0%)',{exact:true}).waitFor();
+    await student.page.getByText('Assessment schedule',{exact:true}).first().waitFor();
+    assert.equal(await student.page.getByText('10 / 20 (50.0%)',{exact:true}).count(),0);
     await page.locator('#score-rows input').fill('18'); await page.locator('#save-scores').click();
-    await student.page.getByText('18 / 20 (90.0%)',{exact:true}).waitFor();
+    assert.equal(await student.page.getByText('18 / 20 (90.0%)',{exact:true}).count(),0);
     await page.getByText('No active holistic care alerts.',{exact:true}).waitFor();
     await otherEditor.locator('#save-scores').click();
     await otherEditor.getByText(/A score was changed in another session/).waitFor();
     assert.equal(await otherEditor.locator('#score-rows input').inputValue(),'11');
     await otherEditor.close();
-    console.log('PASS second student session updates instantly and corrected score resolves care alert');
+    console.log('PASS student has schedules without scores; corrected score resolves care alert');
     console.log('PASS concurrent stale edits are rejected and preserved for review');
     await page.setViewportSize({width:390,height:844});
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),true,'Mobile page should not overflow');
@@ -135,6 +173,7 @@ async function until(fn, message) {
     await page.screenshot({path:'test-results/deep-mobile.png',fullPage:true});
     await page.goto(base+'/teacher/index.html');
     await page.locator('#view-dashboard').waitFor({state:'visible'});
+    await page.locator('.classcare-nav-links a[href="#teacher-care-alerts"]').click();
     await page.locator('#holistic-live').waitFor({state:'visible'});
     await page.waitForTimeout(1000);
     const admin = await context('admin');

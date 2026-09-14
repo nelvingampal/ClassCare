@@ -153,7 +153,9 @@
     if (!navigator.onLine) return say('Reconnect before publishing an assessment.');
     const button = $('publish-assessment'); button.disabled = true;
     try {
-      const docRef = await db().collection('summativeAssessments').add({ ...data, teacherId: user.uid, createdAt: stamp(), updatedAt: stamp() });
+      const docRef = db().collection('summativeAssessments').doc();
+      const batch = db().batch();
+      batch.set(docRef,{ ...data, teacherId:user.uid,createdAt:stamp(),updatedAt:stamp() });
       // Requirement 2: Save notification to global notifications and scheduledTests collections
       const passingScore = Number(((data.maxScore * data.thresholdPercent) / 100).toFixed(1));
       const notifData = {
@@ -173,11 +175,12 @@
         createdAt: stamp(),
         updatedAt: stamp()
       };
-      await db().collection('notifications').add(notifData).catch(err => console.warn('[summative] notifications write notice:', err));
-      await db().collection('scheduledTests').doc(`${user.uid}_${data.section}_${Date.now()}`).set(notifData).catch(() => {});
+      batch.set(db().collection('notifications').doc(docRef.id),notifData);
+      batch.set(db().collection('scheduledTests').doc(docRef.id),notifData);
+      await batch.commit();
 
       say('Assessment published. Students in this section can see the schedule now.');
-      if (typeof Toast !== 'undefined' && Toast.success) Toast.success('Assessment scheduled and student notification dispatched!');
+      if (typeof Toast !== 'undefined' && Toast.success) Toast.success('Assessment and in-app schedule saved.');
     } catch (error) { say(`Assessment not published: ${error.message}`); }
     finally { button.disabled = false; }
   };
@@ -307,8 +310,8 @@
     try {
       // A transaction gets one roster profile per row in the security rules.
       // Keep chunks below Firestore's 20 rule-document-access limit.
-      for (let offset = 0; offset < entries.length; offset += 15) {
-        const chunk = entries.slice(offset, offset + 15);
+      for (let offset = 0; offset < entries.length; offset += 5) {
+        const chunk = entries.slice(offset, offset + 5);
         await db().runTransaction(async tx => {
         const refs = chunk.map(([id]) => db().collection('summativeScores').doc(id));
         const current = await Promise.all(refs.map(ref => tx.get(ref)));
@@ -341,7 +344,7 @@
       setTimeout(() => location.replace("../index.html"), 700);
       return;
     }
-    user = next && !next.__profileError && ['teacher', 'admin'].includes(next.role) ? next : null;
+    user = next && !next.__profileError && ['teacher', 'admin'].includes(next.role) && !next.disabled && (next.role === 'admin' || next.pending_approval === false) ? next : null;
     if ($('summative-content')) $('summative-content').hidden = !user;
     if ($('auth-required')) $('auth-required').hidden = !!user;
     if (!user) return;

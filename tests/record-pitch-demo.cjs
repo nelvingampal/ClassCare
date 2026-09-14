@@ -1,0 +1,60 @@
+/* Synthetic local demonstration only. Never accepts a production project/host. */
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {chromium}=require('playwright');
+const {initializeTestEnvironment}=require('@firebase/rules-unit-testing');
+const {doc,setDoc}=require('firebase/firestore');
+const output='C:/Users/Mico/Documents/ClassCare-Presentation';
+const base='http://127.0.0.1:5599';
+const email='pitch-teacher@classcare.test',password='ClassCareDemo2026!';
+(async()=>{
+ assert.equal(process.env.FIRESTORE_EMULATOR_HOST,'127.0.0.1:8080');
+ const env=await initializeTestEnvironment({projectId:'demo-classcare',firestore:{rules:fs.readFileSync('firestore.rules','utf8')}});
+ const endpoint='http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:';
+ let res=await fetch(endpoint+'signUp?key=demo-key',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,returnSecureToken:true})});
+ if(!res.ok)res=await fetch(endpoint+'signInWithPassword?key=demo-key',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,returnSecureToken:true})});
+ const account=await res.json();assert.ok(account.localId,'Local demo sign-in failed');
+ const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const names=['Sam Santos','Bea Reyes','Leo Ramos','Maya Cruz','Nico Flores','Aira Garcia','Luis Mendoza','Zoe Torres','Emil Castro','Mia Dizon','Ian Villanueva','Ava Navarro','Ben Aquino','Elle Bautista','Noah Lim','Lia Mercado','Caleb Ong','Ana Perez','Paolo Rivera','Sofia Tan','Luca Vega','Isla David','Enzo Luna','Jade Lopez','Theo Medina','Clara Diaz','Jules Flores','Inez Ramos','Rafa Cruz','Alia Santos'];
+ await env.clearFirestore();
+ await env.withSecurityRulesDisabled(async c=>{
+ const db=c.firestore();
+ await setDoc(doc(db,'users',account.localId),{role:'teacher',email,first_name:'Demo',last_name:'Teacher',section:'Grade 5-A',subject:'Mathematics',pending_approval:false,disabled:false,assigned_sections:[],enrollment_status:'enrolled'});
+ await setDoc(doc(db,'teacher_subjects',account.localId),{subjects:['Mathematics']});
+ await setDoc(doc(db,'settings','global'),{morning_start:'07:30',morning_late_cutoff:'07:45',enrollment_open:false});
+ await setDoc(doc(db,'summativeAssessments','pitch-math'),{teacherId:account.localId,title:'Fractions practice',subject:'Mathematics',section:'Grade 5-A',maxScore:20,thresholdPercent:75,scheduledDate:today,status:'Published'});
+ for(let i=0;i<names.length;i++){
+ const uid='pitch-'+String(i+1).padStart(2,'0'),[first_name,...rest]=names[i].split(' '),student_id='DEMO-'+String(i+1).padStart(3,'0');
+ await setDoc(doc(db,'users',uid),{role:'student',first_name,last_name:rest.join(' '),student_id,section:'Grade 5-A',pending_approval:false,disabled:false,enrollment_status:'enrolled'});
+ if(i<27)await setDoc(doc(db,'attendance',`${uid}_${today}`),{student_uid:uid,student_id,student_name:names[i],section:'Grade 5-A',date:today,time_in:i<24?'07:25':'07:55',status:i<24?'Present':'Late',scanned_by:account.localId,emotion:i===0?'sad':'okay',checkin_skipped:false});
+ if(i===0)await setDoc(doc(db,'emotional_checkins','pitch-response'),{student_uid:uid,date:today,mood:'Sad',emotion:'sad',stress:'A little stressed',need:'Someone to talk to',recorded_via:'qr_scanner',is_negative:true});
+ await setDoc(doc(db,'summativeScores',`pitch-math_${uid}`),{teacherId:account.localId,studentId:uid,studentName:names[i],assessmentId:'pitch-math',subject:'Mathematics',section:'Grade 5-A',score:i===0?12:16+i%5,maxScore:20,thresholdPercent:75,assessmentDate:today});
+ await setDoc(doc(db,'grades',`pitch-grade-${uid}`),{teacher_uid:account.localId,student_uid:uid,student_name:names[i],student_id,section:'Grade 5-A',subject:'Mathematics',term1:84,term2:82,term3:null,term4:null});
+ }
+ });
+ fs.mkdirSync(path.join(output,'build/video'),{recursive:true});
+ const browser=await chromium.launch({channel:'msedge',headless:true});
+ const ctx=await browser.newContext({viewport:{width:1440,height:900},recordVideo:{dir:path.join(output,'build/video'),size:{width:1440,height:900}},serviceWorkers:'block',ignoreHTTPSErrors:true});
+ await ctx.route(/https:\/\/(?:firestore\.googleapis\.com|identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|api\.telegram\.org|api\.emailjs\.com|generativelanguage\.googleapis\.com)/,r=>r.abort());
+ const login=await ctx.newPage();await login.goto(base+'/teacher/index.html');await login.waitForFunction(()=>!!window.ClassCare);
+ await login.evaluate(({email,password})=>ClassCare.getFirebase().auth.signInWithEmailAndPassword(email,password),{email,password});
+ await login.locator('#view-dashboard').waitFor({state:'visible'});
+ const page=await ctx.newPage();await page.goto(base+'/teacher/index.html');await page.locator('#view-dashboard').waitFor({state:'visible'});
+ await page.evaluate(()=>{if(Theme.get()!=='light')Theme.toggle();});
+ await page.waitForFunction(()=>document.getElementById('pill-stat-total').textContent.includes('30'));
+ await page.waitForFunction(()=>document.getElementById('overview-care-status').textContent.startsWith('1 holistic'),{},{timeout:60000});
+await page.waitForFunction(()=>document.getElementById('pill-stat-late').textContent==='3 late');
+ await page.screenshot({path:path.join(output,'assets/verified-overview.png'),clip:{x:260,y:20,width:1140,height:610}});
+ await page.evaluate(()=>{const label=document.createElement('div');label.textContent='RECORDED LOCAL DEMONSTRATION • FICTIONAL RECORDS • NO OUTBOUND NOTIFICATIONS';Object.assign(label.style,{position:'fixed',bottom:'0',left:'232px',right:'0',background:'#17364d',color:'white',padding:'12px',font:'bold 14px Arial',textAlign:'center',zIndex:99999});document.body.append(label);});
+ await page.waitForTimeout(4000);
+ await page.locator('#nav-teacher-students').click();await page.locator('[data-directory-review="pitch-01"]').click();await page.waitForTimeout(5000);
+ await page.screenshot({path:path.join(output,'assets/verified-students.png')});
+ await page.locator('#directory-back').click();await page.locator('#nav-teacher-attendance').click();await page.waitForTimeout(4000);
+ await page.locator('#nav-scores-group summary').click();await page.locator('#nav-teacher-grades').click();await page.waitForTimeout(4000);
+ await page.locator('#nav-teacher-summative').click();await page.waitForTimeout(4000);
+ await page.locator('#nav-teacher-care-alerts').click();await page.waitForTimeout(5000);
+ await page.locator('#nav-teacher-overview').click();await page.waitForTimeout(3000);
+ const video=page.video();await page.close();await video.saveAs(path.join(output,'output/CLASSCARE_RECORDED_LOCAL_DEMO.webm'));
+ await ctx.close();await browser.close();await env.cleanup();
+ fs.writeFileSync(path.join(output,'output/LOCAL_DEMO_ACCESS.md'),`# Local synthetic preview\n\nURL: ${base}/teacher/index.html\n\nEmail: ${email}\n\nPassword: ${password}\n\nThese credentials are for the local emulator only. No real records or message delivery. Seeded ${today}. Restart instructions are in the integration repository's server.js and firebase.json. Tests clear these fixtures; rerun tests/record-pitch-demo.cjs afterwards to restore this demonstration.\n`);
+ console.log('PASS recorded synthetic teacher journey; local preview fixtures restored');
+})().catch(e=>{console.error(e);process.exitCode=1;});

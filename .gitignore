@@ -1,4 +1,8 @@
 node_modules/
 .tools/
 *-debug.log
+*.log
 test-results/
+.env
+.env.*
+!.env.example
