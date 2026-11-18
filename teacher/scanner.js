@@ -680,6 +680,13 @@
     $("#btn-skip-emotion")?.addEventListener("click", () => {
       void skipWellbeingSurvey();
     });
+    ClassCareUI.bindModalFocus($("#emotion-overlay"));
+    $("#emotion-overlay")?.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && !_isKiosk3StepSaving) {
+        event.preventDefault();
+        void skipWellbeingSurvey();
+      }
+    });
 
     $("#scanner-subject-select")?.addEventListener("change", () => {
       updateQuotaBadge();
@@ -3265,6 +3272,7 @@
   let activeKioskGesture = null;
 
   async function skipWellbeingSurvey() {
+    if (_isKiosk3StepSaving) return;
     if (activeKioskGesture) {
       activeKioskGesture.stop();
       activeKioskGesture = null;

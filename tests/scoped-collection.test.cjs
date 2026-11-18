@@ -21,3 +21,11 @@ test('student queries use auth UID rather than school ID; admins retain scope', 
   assert.deepEqual(scope(ref('attendance'), { uid: 's', role: 'student' }).get(), [['studentId', '==', 's']]);
   const original = ref('attendance'); assert.equal(scope(original, { uid: 'a', role: 'admin' }), original);
 });
+
+test('legacy owner queries do not hide records lacking studentId, and cannot select another owner', () => {
+  const user = { uid: 's', role: 'student' };
+  for (const [kind, field] of [['attendance', 'student_uid'], ['concern_submissions', 'student_uid'], ['helpdesk_tickets', 'sender_uid']]) {
+    assert.deepEqual(scope(ref(kind), user).where(field, '==', 's').get(), [[field, '==', 's']]);
+    assert.deepEqual(scope(ref(kind), user).where(field, '==', 'other').get(), [['studentId', '==', 's'], [field, '==', 'other']]);
+  }
+});

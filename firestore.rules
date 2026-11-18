@@ -16,14 +16,18 @@ service cloud.firestore {
     }
     function studentOwner(d) {
       return active() && profile().role == 'student' &&
-        (d.get('student_uid', d.get('studentId', '')) == request.auth.uid || d.get('sender_uid', '') == request.auth.uid);
+        (d.get('student_uid', d.get('studentId', '')) == request.auth.uid || d.get('sender_uid', '') == request.auth.uid)
+        && d.get('student_uid', request.auth.uid) == request.auth.uid
+        && d.get('studentId', request.auth.uid) == request.auth.uid
+        && d.get('sender_uid', request.auth.uid) == request.auth.uid;
     }
     function scoped(d) { return assignedSection(d.get('section', '')); }
     function validStudent(d) {
-      let uid = d.get('studentId', d.get('student_uid', ''));
+      let uid = d.get('studentId', d.get('student_uid', d.get('sender_uid', '')));
       let s = get(/databases/$(database)/documents/users/$(uid)).data;
       return uid is string && s.role == 'student' && s.section == d.section
         && d.get('student_uid', uid) == uid
+        && d.get('sender_uid', uid) == uid
         && (d.get('recorded_via', '') != 'deep_kiosk' || fiveAnswers(d));
     }
     function answer(a) { return a.option is int && a.option >= 1 && a.option <= 4 && a.label is string; }
@@ -33,21 +37,26 @@ service cloud.firestore {
         && answer(d.answers.support) && answer(d.answers.needs);
     }
     function safeUpdate() {
-      let oldId = resource.data.get('studentId', resource.data.get('student_uid', ''));
-      let newId = request.resource.data.get('studentId', request.resource.data.get('student_uid', ''));
+      let oldId = resource.data.get('studentId', resource.data.get('student_uid', resource.data.get('sender_uid', '')));
+      let newId = request.resource.data.get('studentId', request.resource.data.get('student_uid', request.resource.data.get('sender_uid', '')));
       return newId == oldId && request.resource.data.section == resource.data.section;
     }
     function studentCreateAllowed(kind, d) {
       return kind in ['emotionalChecks', 'emotional_checkins', 'helpdesk_tickets', 'concern_submissions', 'talkToSomeone', 'enrollment_requests']
         && profile().get('pending_approval', false) == false
         && studentOwner(d)
+        && d.get('section', '') == profile().get('section', '')
         && d.get('recorded_via', '') != 'deep_kiosk'
-        && !(kind in ['concern_submissions', 'talkToSomeone'] && d.get('status', 'Open') != 'Open');
+        && !(kind in ['helpdesk_tickets', 'concern_submissions', 'talkToSomeone'] && d.get('status', 'Open') != 'Open')
+        && !(kind == 'enrollment_requests' && d.get('status', 'pending') != 'pending')
+        && !d.keys().hasAny(['teacher_response', 'teacher_uid', 'resolved_by', 'resolved_at', 'approved_by']);
     }
     function studentUpdateAllowed(kind, oldData, newData) {
       return kind in ['emotionalChecks', 'emotional_checkins', 'helpdesk_tickets', 'concern_submissions', 'talkToSomeone']
         && profile().get('pending_approval', false) == false
         && studentOwner(oldData) && studentOwner(newData)
+        && !newData.diff(oldData).affectedKeys().hasAny(['studentId', 'student_uid', 'sender_uid', 'section',
+          'status', 'teacher_response', 'teacher_uid', 'resolved_by', 'resolved_at', 'approved_by', 'recorded_by', 'recorded_via'])
         && oldData.get('recorded_via', '') != 'deep_kiosk'
         && newData.get('recorded_via', oldData.get('recorded_via', '')) != 'deep_kiosk'
         && !(kind in ['concern_submissions', 'talkToSomeone'] && newData.get('status', oldData.get('status', 'Open')) != oldData.get('status', 'Open'));
@@ -66,13 +75,23 @@ service cloud.firestore {
         && d.student_id is string && d.student_id.size() > 0 && d.student_id.size() <= 20;
     }
 
+    function teacherSelfProfileCreate(uid, d) {
+      return signedIn() && request.auth.uid == uid
+        && d.keys().hasOnly(['uid', 'email', 'username', 'first_name', 'last_name', 'subject', 'position',
+          'section', 'assigned_sections', 'role', 'pending_approval', 'disabled', 'created_at'])
+        && d.uid == uid && d.email == request.auth.token.email
+        && d.role == 'teacher' && d.pending_approval == true
+        && d.get('disabled', false) == false && d.section == '' && d.assigned_sections == [];
+    }
+
     match /users/{uid} {
       // Approved teachers and administrators have read access across all student profiles.
       allow read: if isAdmin() || (active() && request.auth.uid == uid)
         || (isTeacher() && resource.data.role == 'student');
       // Students may submit a pending profile request. Only admins approve,
       // assign sections, or change privileges after creation.
-      allow create: if isAdmin() || studentSelfProfileCreate(uid, request.resource.data);
+      allow create: if isAdmin() || studentSelfProfileCreate(uid, request.resource.data)
+        || teacherSelfProfileCreate(uid, request.resource.data);
       allow update, delete: if isAdmin();
       match /moods/{date} {
         allow read: if owner(resource.data) || isStaff();

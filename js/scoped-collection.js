@@ -6,7 +6,7 @@
   const scopedCollections = new Set([...studentCollections, 'users', 'summativeAssessments', 'notifications', 'scheduledTests']);
   function scopedCollection(ref, user) {
     if (!scopedCollections.has(ref.id) || (user?.role === 'admin' && !user.disabled && !user.__profileError)) return ref;
-    function query() {
+    function query(ownerField = 'studentId') {
       if (!user || user.__profileError || user.disabled || !user.uid) throw Object.assign(new Error('A verified account is required.'), { code: 'permission-denied' });
       if (user.role === 'teacher' && user.pending_approval === false) {
         return ref.id === 'users' ? ref.where('role', '==', 'student') : ref;
@@ -14,14 +14,22 @@
       if (user.role === 'student') {
         if (ref.id === 'users') return ref.where('__name__', '==', user.uid);
         if (['summativeAssessments', 'notifications', 'scheduledTests'].includes(ref.id)) return ref.where('section', '==', user.section || '__unassigned__');
-        return ref.where('studentId', '==', user.uid);
+        return ref.where(ownerField, '==', user.uid);
       }
       throw Object.assign(new Error('Approved staff access is required.'), { code: 'permission-denied' });
     }
     return new Proxy(ref, {
       get(target, name) {
         if (['where', 'orderBy', 'limit', 'limitToLast', 'startAt', 'startAfter', 'endAt', 'endBefore', 'get', 'onSnapshot', 'count'].includes(name)) {
-          return (...args) => { const scoped = query(); return scoped[name](...args); };
+          return (...args) => {
+            // Preserve legacy UID queries instead of adding a second owner field
+            // that is absent on older attendance, concerns and helpdesk records.
+            const ownFilter = name === 'where' && user?.role === 'student'
+              && ['studentId', 'student_uid', 'sender_uid'].includes(args[0])
+              && args[1] === '==' && args[2] === user.uid;
+            const scoped = query(ownFilter ? args[0] : 'studentId');
+            return ownFilter ? scoped : scoped[name](...args);
+          };
         }
         const value = Reflect.get(target, name, target);
         return typeof value === 'function' ? value.bind(target) : value;

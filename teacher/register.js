@@ -120,7 +120,6 @@
 
   registerForm?.addEventListener("submit", async event => {
     event.preventDefault();
-    if (!ClassCare.canProvisionProfiles()) return Toast.warn('Account creation is managed by your administrator under the current security policy.');
     const termsCheckbox = $("#teacher-terms-checkbox");
     if (!termsCheckbox || !termsCheckbox.checked) {
       event.stopImmediatePropagation();
@@ -140,12 +139,14 @@
 
     const button = $("#btn-teacher-register");
     Utils.setLoading(button, true);
+    let regApp = null;
+    let createdUser = null;
+    let profileSaved = false;
     try {
       const services = ClassCare.getFirebase();
       if (!services?.auth) throw Object.assign(new Error("Firebase is unavailable."), { code: "service-unavailable" });
 
       // Use an isolated Firebase app instance to avoid overwriting/resetting active Admin sessions in other tabs
-      let regApp = null;
       try {
         const config = window.CLASSCARE_CONFIG?.firebase;
         if (config && typeof firebase !== "undefined" && typeof firebase.initializeApp === "function") {
@@ -155,13 +156,16 @@
         console.warn("[teacher-reg] secondary app initialization notice:", appErr);
       }
 
-      const authInstance = regApp ? regApp.auth() : services.auth;
-      const dbInstance = regApp ? regApp.firestore() : services.db;
+      if (!regApp) throw new Error('Registration could not start safely. Please reload and retry.');
+      const authInstance = regApp.auth();
+      const dbInstance = regApp.firestore();
+      ClassCare.configureLocalEmulators(authInstance, dbInstance);
 
       const credential = await authInstance.createUserWithEmailAndPassword(
         String(values.email).trim().toLowerCase(),
         String(values.password)
       );
+      createdUser = credential.user;
 
       await dbInstance.collection("users").doc(credential.user.uid).set({
         uid: credential.user.uid,
@@ -174,9 +178,10 @@
         section: "",
         assigned_sections: [],
         role: "teacher",
-        pending_approval: false,
+        pending_approval: true,
         created_at: firebase.firestore.FieldValue.serverTimestamp()
       });
+      profileSaved = true;
 
       if (regApp) {
         await authInstance.signOut().catch(() => {});
@@ -188,16 +193,21 @@
       const termsRow = $("#teacher-terms-checkbox-row");
       if (termsRow) termsRow.classList.remove("is-enabled");
 
-      Toast.success("Teacher account created! You can now log in to the Teacher portal.");
+      Toast.success("Registration submitted. An administrator must approve your account before you can access classes.");
       setTimeout(() => {
         showTab("login");
         const loginEmail = $("#teacher-login-email");
         if (loginEmail) loginEmail.value = String(values.email).trim().toLowerCase();
       }, 1200);
     } catch (error) {
+      if (createdUser && !profileSaved) {
+        try { await createdUser.delete(); }
+        catch (cleanupError) { console.warn("[teacher-registration] Account cleanup failed; contact an administrator:", cleanupError); }
+      }
       console.error("[teacher-registration] failed:", error);
       Toast.error(String(error?.code || "").includes("email-already") ? "That email is already registered. Sign in instead." : error.message || "Teacher registration failed.");
     } finally {
+      if (regApp) { await regApp.delete().catch(() => {}); }
       Utils.setLoading(button, false);
     }
   });

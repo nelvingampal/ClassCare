@@ -392,7 +392,7 @@
     const parentEmail = String($("#teacher-walkin-parent-email")?.value || "").trim();
     const parentContact = String($("#teacher-walkin-parent-contact")?.value || "").trim();
     const username = String($("#teacher-walkin-username")?.value || "").trim();
-    const password = String($("#teacher-walkin-password")?.value || "").trim() || "student123";
+    const password = String($("#teacher-walkin-password")?.value || "").trim();
 
     if (!fname || !lname) return Toast.error("Please enter the student's first and last name.");
     if (!grade) return Toast.error("Please select a target grade level.");
@@ -501,7 +501,7 @@
     const credUserEl = $("#walkin-cred-username");
     const credPassEl = $("#walkin-cred-password");
     if (credUserEl) credUserEl.textContent = studentInfo.username || "—";
-    if (credPassEl) credPassEl.textContent = studentInfo.password || "student123";
+    if (credPassEl) credPassEl.textContent = studentInfo.password || "Not available";
 
     // 2. Populate Official Student ID Card Elements
     const cardNameEl = $("#walkin-card-name");

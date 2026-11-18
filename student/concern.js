@@ -159,7 +159,7 @@
       is_anonymous: isAnonymous,
       is_concern: true,
       category: "talk_to_someone",
-      status: "Not Solved",
+      status: "Open",
       submitted_at: firebase.firestore.FieldValue.serverTimestamp(),
       submitted_date: todayIso(),
       timestamp: firebase.firestore.FieldValue.serverTimestamp()

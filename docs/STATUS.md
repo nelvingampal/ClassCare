@@ -1,5 +1,21 @@
 # ClassCare status — current checkpoint first
 
+## November 18 - startup correction after user-reported failure
+
+The prior "running" statement confirmed only a process listening, not a usable browser or database. User reported that the system did not work. Loopback requests still fail with EACCES, and browser control timed out. The old web-only process was stopped.
+
+Added Start-ClassCare.cmd and scripts/start-local.cjs. npm start and both PowerShell launchers now start Auth/Firestore plus the web server, await HTTP readiness, verify the served demo configuration, and prepare three explicitly synthetic demo accounts. The launcher prints READY only after those operations succeed; network denial prints NOT READY and an actionable explanation. npm run start:web remains the static-only command. The complete launcher must be run in the user's normal Windows terminal/File Explorer because the current execution environment denies loopback. No claim of successful full-system launch or login is made. Local Git commit remains blocked by .git write permissions.
+
+## November 18 - local backend/security/accessibility repair candidate
+
+Current source: main at f84d1c8 before this repair. Follow the current AGENTS.md all-class staff policy; the historical September 14 section-isolation proposal below is not the active authorization contract.
+
+Local launchers now share a loopback-only server that unconditionally substitutes demo-classcare configuration, blocks private source/config files, and preserves the existing 5500/5599 port changes. Teacher self-registration submits an unassigned, pending profile through isolated emulator-aware services and rolls back a failed profile save. Concern creation uses Open; student writes cannot forge owner aliases, another section, resolved status or staff responses. Legacy UID queries and sender-only helpdesk updates are repaired. New enrollment profiles/recovery drafts no longer store plaintext passwords; manual provisioning rejects missing passwords/auth failures and includes the request section. Scanner labels, live status and modal keyboard focus handling were added.
+
+PASS: 33 unit tests, including actual server-handler tests without sockets, registration rollback and provisioning tests with mocked adapters; tracked JavaScript syntax and whitespace checks. Local Node server reported listening on 5500 and 5599. Requested local commit BLOCKED: staging could not create .git/index.lock (Permission denied); changes remain in the working tree.
+
+BLOCKED: current Firestore rule execution and full Auth/Firestore/browser integration. CLI emulator hub timed out; direct cached Firestore emulator failed with `Unable to establish loopback connection` / `Permission denied: connect`; Node loopback fetch returned EACCES. Edge accessibility runner could not launch successfully (named-pipe/browser termination). No runtime accessibility or Firestore PASS is claimed. NOT RUN: dependency vulnerability scan, full WCAG audit, real camera/equipment, production data/rules, notifications, deployment, push or merge. See AUDIT_2026-11-18.md for evidence, remaining issues and reproduction commands. This candidate is not release-ready.
+
 ## September 15 — hand gesture detection stabilization & verification
 
 Resolved hand detection inaccuracies, network delays, and dwell jitter in both `teacher/scanner.html` and `teacher/deep-check.html`:

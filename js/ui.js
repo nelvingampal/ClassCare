@@ -64,8 +64,48 @@
     document.body.dataset.auth = authenticated ? "signed-in" : "guest";
   }
 
+  function bindModalFocus(modal) {
+    if (!modal || modal.dataset.focusBound) return;
+    modal.dataset.focusBound = 'true';
+    modal.tabIndex = -1;
+    let opened = false, previousFocus = null;
+    const visible = el => !!el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden';
+    const controls = () => Array.from(modal.querySelectorAll('button, a[href], input, select, textarea, [tabindex]'))
+      .filter(el => !el.disabled && el.tabIndex >= 0 && visible(el));
+    function synchronize() {
+      const nowOpen = visible(modal);
+      if (nowOpen && !opened) {
+        previousFocus = document.activeElement;
+        opened = true;
+        modal.setAttribute('aria-hidden', 'false');
+        (controls()[0] || modal).focus();
+      } else if (!nowOpen && opened) {
+        opened = false;
+        modal.setAttribute('aria-hidden', 'true');
+        if (previousFocus?.isConnected && visible(previousFocus)) previousFocus.focus();
+      } else if (nowOpen && (!modal.contains(document.activeElement) || !visible(document.activeElement))) {
+        (controls()[0] || modal).focus();
+      }
+    }
+    modal.addEventListener('keydown', event => {
+      if (event.key !== 'Tab' || !opened) return;
+      const items = controls(), first = items[0], last = items[items.length - 1];
+      if (!first) { event.preventDefault(); modal.focus(); }
+      else if (event.shiftKey && (document.activeElement === first || document.activeElement === modal)) {
+        event.preventDefault(); last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault(); first.focus();
+      }
+    });
+    document.addEventListener('focusin', event => {
+      if (opened && visible(modal) && !modal.contains(event.target)) (controls()[0] || modal).focus();
+    });
+    new MutationObserver(synchronize).observe(modal, { attributes: true, attributeFilter: ['class', 'style'], childList: true, subtree: true });
+    synchronize();
+  }
+
   // MODIFIED: Renamed from CampusUI → ClassCareUI
-  window.ClassCareUI = { ICONS, escapeHtml, icon, normalizeStatus, statusBadge, roleBadge, setState, formatDate, setAuthState };
+  window.ClassCareUI = { ICONS, escapeHtml, icon, normalizeStatus, statusBadge, roleBadge, setState, formatDate, setAuthState, bindModalFocus };
   // MODIFIED: Backward-compatibility alias
   // window.ClassCareUI is the global UI helper
 })();

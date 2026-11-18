@@ -12,6 +12,20 @@ let _app = null;
 let _auth = null;
 let _db = null;
 let _initError = null;
+const _emulatorServices = new WeakSet();
+
+function configureLocalEmulators(auth, db) {
+  if (FIREBASE_CONFIG.projectId !== 'demo-classcare'
+      || !['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) return;
+  if (auth && !_emulatorServices.has(auth)) {
+    auth.useEmulator('http://127.0.0.1:9099', { disableWarnings: true });
+    _emulatorServices.add(auth);
+  }
+  if (db && !_emulatorServices.has(db)) {
+    db.useEmulator('127.0.0.1', 8080);
+    _emulatorServices.add(db);
+  }
+}
 
 function normalizeRole(value) {
   return String(value || "").trim().toLowerCase();
@@ -33,14 +47,9 @@ function getFirebase() {
   }
   try {
     _app = firebase.apps?.length ? firebase.app() : firebase.initializeApp(FIREBASE_CONFIG);
-    const syntheticLocal = FIREBASE_CONFIG.projectId === 'demo-classcare'
-      && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
     _auth = firebase.auth();
     _db = firebase.firestore();
-    if (syntheticLocal) {
-      _auth.useEmulator('http://127.0.0.1:9099', { disableWarnings: true });
-      _db.useEmulator('127.0.0.1', 8080);
-    }
+    configureLocalEmulators(_auth, _db);
     _auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
     return { app: _app, auth: _auth, db: _db };
   } catch (error) {
@@ -527,8 +536,8 @@ const DB = {
     }
   },
   async manualEnrollStudent({ studentData, enrolledBy }) {
-    if (!enrolledBy || !enrolledBy.uid) {
-      return { success: false, error: "Staff authentication is required." };
+    if (!enrolledBy?.uid || enrolledBy.role !== 'admin' || enrolledBy.disabled || enrolledBy.__profileError) {
+      return { success: false, error: "Administrator approval is required to provision student accounts." };
     }
     const settings = await this.getSettings();
     // Verify enrollment period is open unless caller is IT Admin (God Mode)
@@ -608,7 +617,8 @@ const DB = {
       rawUsername = `${cleanF}${cleanL}`.slice(0, 20);
       if (rawUsername.length < 3) rawUsername = `student${Math.floor(100 + Math.random() * 900)}`;
     }
-    const studentPassword = String(studentData.password || "student123").trim() || "student123";
+    const studentPassword = String(studentData.password || "").trim();
+    if (studentPassword.length < 6) return { success: false, error: "Choose a student password of at least 6 characters." };
 
     let studentUid = "";
     let authEmail = `${rawUsername}@students.classcare.local`;
@@ -619,6 +629,7 @@ const DB = {
       if (typeof firebase !== "undefined" && FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey) {
         const secAppName = `ClassCareEnrollAuth_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
         secondaryApp = firebase.initializeApp(FIREBASE_CONFIG, secAppName);
+        configureLocalEmulators(secondaryApp.auth());
         try {
           const userCredential = await secondaryApp.auth().createUserWithEmailAndPassword(authEmail, studentPassword);
           studentUid = userCredential.user?.uid;
@@ -647,7 +658,8 @@ const DB = {
       }
     }
 
-    const newStudentRef = studentUid ? this.users.doc(studentUid) : this.users.doc();
+    if (!studentUid) return { success: false, error: "Student login could not be created. Retry before enrolling; no student profile was saved." };
+    const newStudentRef = this.users.doc(studentUid);
     studentUid = newStudentRef.id;
     const studentFullName = `${firstName} ${lastName}`.trim();
     const timestamp = firebase.firestore.FieldValue.serverTimestamp();
@@ -666,7 +678,6 @@ const DB = {
         last_name: lastName,
         username: rawUsername,
         email: authEmail,
-        initial_password: studentPassword,
         student_id: finalStudentId,
         grade_level: targetGrade,
         target_grade_level: targetGrade,
@@ -697,6 +708,7 @@ const DB = {
         target_grade_level: targetGrade,
         assigned_section: assignedSection,
         status: "Approved",
+        section: assignedSection,
         enrollment_type: "manual_walkin",
         enrolled_by: enrolledBy.uid,
         enrolled_by_role: enrolledBy.role,
@@ -760,7 +772,6 @@ const DB = {
         last_name: lastName,
         username: rawUsername,
         email: authEmail,
-        initial_password: studentPassword,
         student_id: finalStudentId,
         grade_level: targetGrade,
         section: "",
@@ -787,6 +798,7 @@ const DB = {
         target_grade_level: targetGrade,
         assigned_section: "",
         status: "Waitlisted",
+        section: "",
         enrollment_type: "manual_walkin",
         academic_year: settings.academic_year || "",
         enrolled_by: enrolledBy.uid,
@@ -1248,7 +1260,7 @@ function onCurrentUser(callback) {
 window.ClassCare = {
   collection,
   canProvisionProfiles: () => _profileValue?.role === 'admin' && !_profileValue.disabled && !_profileValue.__profileError,
-  getFirebase, isAvailable: () => !!getFirebase(), DB, onCurrentUser,
+  getFirebase, configureLocalEmulators, isAvailable: () => !!getFirebase(), DB, onCurrentUser,
   isEnrollmentOpen: DB.isEnrollmentOpen.bind(DB),
   resolveStudentProfile: DB.resolveStudentProfile.bind(DB),
   populateStudentProfiles: DB.populateStudentProfiles.bind(DB),

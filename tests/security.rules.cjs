@@ -73,3 +73,37 @@ test('legacy staff update can add only the verified auth UID, never a forged own
  await assertFails(updateDoc(ref,{studentId:'other'}));
  await assertSucceeds(updateDoc(ref,{studentId:'s',time_out:'16:00'}));
 });
+
+test('teacher registration is pending-only, self-owned, and cannot grant classroom access',async()=>{
+ const db=env.authenticatedContext('new-teacher',{email:'teacher@example.test'}).firestore();
+ const profile={uid:'new-teacher',email:'teacher@example.test',role:'teacher',section:'',assigned_sections:[],pending_approval:true};
+ await assertFails(setDoc(doc(db,'users','new-teacher'),{...profile,pending_approval:false}));
+ await assertFails(setDoc(doc(db,'users','new-teacher'),{...profile,assigned_sections:['A']}));
+ await assertFails(setDoc(doc(db,'users','new-teacher'),{...profile,role:'admin'}));
+ await assertSucceeds(setDoc(doc(db,'users','new-teacher'),profile));
+ await assertFails(getDocs(collection(db,'attendance')));
+ await assertFails(updateDoc(doc(db,'users','new-teacher'),{pending_approval:false}));
+});
+
+test('student concerns reject conflicting owners, forged sections, resolution and staff response fields',async()=>{
+ const db=env.authenticatedContext('s').firestore();
+ const base={student_uid:'s',sender_uid:'s',section:'A',status:'Open',message:'Synthetic concern'};
+ const ref=doc(db,'concern_submissions','own-concern');
+ await assertSucceeds(setDoc(ref,base));
+ for(const changes of [{studentId:'other'},{student_uid:'other'},{sender_uid:'other'},{section:'B'},
+   {status:'Resolved'},{teacher_response:'Forged reply'},{teacher_uid:'t'}]) {
+   await assertFails(setDoc(doc(db,'concern_submissions','forged-concern'),{...base,...changes}));
+   await assertFails(updateDoc(ref,changes));
+ }
+ await assertSucceeds(updateDoc(ref,{message:'Revised synthetic concern'}));
+ await assertSucceeds(getDocs(query(collection(db,'concern_submissions'),where('student_uid','==','s'))));
+ await assertFails(setDoc(doc(db,'helpdesk_tickets','forged-ticket'),{sender_uid:'s',section:'A',status:'Resolved'}));
+});
+
+test('staff can respond to legacy sender-only helpdesk tickets without changing ownership',async()=>{
+ await env.withSecurityRulesDisabled(c=>setDoc(doc(c.firestore(),'helpdesk_tickets','legacy-ticket'),{sender_uid:'s',section:'A',status:'Open',message:'Synthetic help'}));
+ const ref=doc(env.authenticatedContext('t').firestore(),'helpdesk_tickets','legacy-ticket');
+ await assertSucceeds(updateDoc(ref,{status:'Resolved',teacher_response:'Synthetic reply'}));
+ await assertFails(updateDoc(ref,{studentId:'other'}));
+ await assertFails(updateDoc(ref,{sender_uid:'other'}));
+});

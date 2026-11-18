@@ -314,7 +314,12 @@
     const authEmail = firebaseLoginId(username);
     const pendingKey = `classcare_pending_student_${authEmail}`;
     let authUserCreated = false;
-    sessionStorage.setItem(pendingKey, JSON.stringify({ ...clean, username, photo_data: photoData }));
+    // Profile recovery needs these fields, never the account password.
+    sessionStorage.setItem(pendingKey, JSON.stringify({
+      username, first_name: clean.first_name, last_name: clean.last_name,
+      student_id: clean.student_id, parent_name: clean.parent_name,
+      parent_contact: clean.parent_contact, parent_email: clean.parent_email, photo_data: photoData
+    }));
     try {
       const services = ClassCare.getFirebase();
       if (!services?.auth) throw Object.assign(new Error("Firebase is unavailable."), { code: "service-unavailable" });
