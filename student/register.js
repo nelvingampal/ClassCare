@@ -314,6 +314,9 @@
     const authEmail = firebaseLoginId(username);
     const pendingKey = `classcare_pending_student_${authEmail}`;
     let authUserCreated = false;
+    let regApp = null;
+    let createdUser = null;
+    let profileSaved = false;
     // Profile recovery needs these fields, never the account password.
     sessionStorage.setItem(pendingKey, JSON.stringify({
       username, first_name: clean.first_name, last_name: clean.last_name,
@@ -323,9 +326,24 @@
     try {
       const services = ClassCare.getFirebase();
       if (!services?.auth) throw Object.assign(new Error("Firebase is unavailable."), { code: "service-unavailable" });
-      const credential = await services.auth.createUserWithEmailAndPassword(authEmail, clean.password);
+      try {
+        const config = window.CLASSCARE_CONFIG?.firebase;
+        if (config && typeof firebase !== "undefined" && typeof firebase.initializeApp === "function") {
+          regApp = firebase.apps?.find(a => a.name === "SecondaryStudentReg") || firebase.initializeApp(config, "SecondaryStudentReg");
+        }
+      } catch (appErr) {
+        console.warn("[student-reg] secondary app initialization notice:", appErr);
+      }
+      const authInstance = regApp ? regApp.auth() : services.auth;
+      const dbInstance = regApp ? regApp.firestore() : null;
+      if (regApp && typeof ClassCare.configureLocalEmulators === "function") {
+        ClassCare.configureLocalEmulators(authInstance, dbInstance);
+      }
+      const credential = await authInstance.createUserWithEmailAndPassword(authEmail, clean.password);
       authUserCreated = true;
-      await ClassCare.DB.users.doc(credential.user.uid).set({
+      createdUser = credential.user;
+      const userDocRef = dbInstance ? dbInstance.collection("users").doc(credential.user.uid) : ClassCare.DB.users.doc(credential.user.uid);
+      await userDocRef.set({
         uid: credential.user.uid, email: credential.user.email, username,
         first_name: Utils.sanitizeText(clean.first_name, { max: 30 }),
         last_name: Utils.sanitizeText(clean.last_name, { max: 30 }),
@@ -340,13 +358,23 @@
         parent_email: String(clean.parent_email || "").trim().toLowerCase(),
         photo_data: photoData, created_at: firebase.firestore.FieldValue.serverTimestamp()
       });
+      profileSaved = true;
+      if (regApp) {
+        await authInstance.signOut().catch(() => {});
+        await services.auth.signInWithEmailAndPassword(authEmail, clean.password);
+      }
       sessionStorage.removeItem(pendingKey);
       Toast.success("Account request submitted. Please wait for administrator approval.");
     } catch (error) {
+      if (createdUser && !profileSaved) {
+        try { await createdUser.delete(); }
+        catch (cleanupError) { console.warn("[student-registration] Account cleanup failed:", cleanupError); }
+      }
       console.error("[student-registration] failed:", error);
-      if (!authUserCreated) sessionStorage.removeItem(pendingKey);
+      if (!authUserCreated || !profileSaved) sessionStorage.removeItem(pendingKey);
       Toast.error(String(error?.code || "").includes("email-already") ? "That username is already registered. Try Sign in." : authErrorMessage(error, "Registration"));
     } finally {
+      if (regApp && typeof regApp.delete === "function") { await regApp.delete().catch(() => {}); }
       Utils.setLoading(button, false);
       button?.replaceChildren(document.createTextNode("Create account"));
     }

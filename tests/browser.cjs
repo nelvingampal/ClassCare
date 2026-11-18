@@ -175,12 +175,12 @@ async function until(fn, message) {
     await page.goto(base+'/teacher/index.html');
     await page.locator('#view-dashboard').waitFor({state:'visible'});
     await page.waitForFunction(()=>window.TeacherScannerState?.students?.size > 0);
-    assert.equal(await page.evaluate(()=>window.TeacherScannerState.students.has('outside-section')),false,'Roster must exclude another section');
-    const denied = await page.evaluate(async()=>{
-      try { await ClassCare.DB.users.doc('outside-section').get({source:'server'}); return false; }
+    assert.equal(await page.evaluate(()=>window.TeacherScannerState.students.has('outside-section')),true,'Approved teacher roster includes all student sections');
+    const denied = await page.evaluate(async adminUid=>{
+      try { await ClassCare.DB.users.doc(adminUid).get({source:'server'}); return false; }
       catch(error) { return error.code === 'permission-denied'; }
-    });
-    assert.equal(denied,true,'Direct cross-section read is denied by Firestore');
+    }, identities.admin.uid);
+    assert.equal(denied,true,'Direct non-student profile read is denied by Firestore');
     await page.locator('.classcare-nav-links a[href="#teacher-care-alerts"]').click();
     await page.locator('#holistic-live').waitFor({state:'visible'});
     await page.waitForTimeout(1000);
@@ -199,6 +199,6 @@ async function until(fn, message) {
     }
     await env.withSecurityRulesDisabled(c=>updateDoc(doc(c.firestore(),'users',identities.teacher.uid),{disabled:true}));
     await page.waitForURL(url=>url.pathname === '/index.html');
-    console.log('PASS section-restricted roster, direct denial, student route rejection and live teacher revocation');
+    console.log('PASS all-class student roster, non-student profile denial, student route rejection and live teacher revocation');
   } finally { await browser?.close(); await env?.cleanup(); server.kill(); }
 })().catch(error => { console.error(error); process.exitCode=1; });

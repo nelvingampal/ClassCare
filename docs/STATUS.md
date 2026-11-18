@@ -1,5 +1,11 @@
 # ClassCare status — current checkpoint first
 
+## November 18 — full backend, correlation engine, and end-to-end verification
+
+Repaired the real-time holistic care-alert evaluation loop in `js/holistic-portals.js` so failing summative scores combined with recent negative emotional check-ins create `careAlerts` and automatically resolve them when scores are corrected to passing. Isolated student self-registration in `student/register.js` via a secondary emulator-aware Firebase app instance with rollback so Auth state changes never race ahead of Firestore profile creation. Cleared unauthorized/revoked persistent Auth sessions in `config/firebase-config.js` to prevent redirect loops, seeded synthetic global settings in `scripts/start-local.cjs`, and aligned `tests/browser.cjs` with the confirmed all-class staff access policy (`AGENTS.md`).
+
+PASS: 35/35 unit tests (`npm test`), 20/20 Firestore security rules tests on the local Firestore emulator (`npm run test:rules`), full end-to-end browser workflow including MediaPipe worker gesture loading, summative care-alert creation/acknowledgment/resolution, and live revocation (`tests/browser.cjs`), full desktop integration and contrast suite (`tests/integration.cjs`), service-worker/IndexedDB/CSV-XLSX reliability suite (`tests/reliability.cjs`), and modal keyboard accessibility test (`npm run test:accessibility`). NOT RUN: physical camera/equipment rehearsal and partner-owned production deployment.
+
 ## November 18 - startup correction after user-reported failure
 
 The prior "running" statement confirmed only a process listening, not a usable browser or database. User reported that the system did not work. Loopback requests still fail with EACCES, and browser control timed out. The old web-only process was stopped.

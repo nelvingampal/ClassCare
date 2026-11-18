@@ -34,7 +34,7 @@
     const intro = node('p', 'Recent summative performance below its threshold, combined with a negative emotional flag in the last 14 days.');
     const state = node('p', 'Connecting…', 'cc-live'), list = node('div'); list.setAttribute('aria-live', 'polite');
     card.append(intro, state, list);
-    const token = generation, data = {}, ready = new Map(), failures = new Set();
+    const token = generation, data = {}, ready = new Map(), failures = new Set(); let running = false, revision = 0, evaluated = -1;
     const ownScores = ClassCare.collection('summativeScores').where('teacherId', '==', user.uid);
     const ownAlerts = ClassCare.collection('careAlerts').where('teacherId', '==', user.uid);
     const names = () => new Map((data.users || []).map(s => [s.id, `${s.first_name || ''} ${s.last_name || ''}`.trim() || s.student_id || 'Student']));
@@ -74,7 +74,32 @@
         list.append(item);
       });
     }
-    const listen = (query, name) => {
+    async function evaluate() {
+      if (running || token !== generation || !navigator.onLine || ready.size < 6 || ![...ready.values()].every(Boolean)) return;
+      running = true;
+      try {
+        while (evaluated !== revision && token === generation && [...ready.values()].every(Boolean)) {
+          evaluated = revision;
+          const students = names(), targets = H.correlate(data.scores || [], [...(data.checks || []), ...(data.attendance || [])], H.schoolDate());
+          const existing = (data.alerts || []).filter(a => a.teacherId === user.uid);
+          const uids = new Set([...targets.keys(), ...existing.filter(a => a.status !== 'Resolved').map(a => a.studentId)]);
+          for (const uid of uids) {
+            if (token !== generation) return;
+            const target = targets.get(uid), ref = ClassCare.collection('careAlerts').doc(`${user.uid}_${uid}`);
+            await db().runTransaction(async tx => {
+              const snap = await tx.get(ref); if (token !== generation) return;
+              const old = snap.exists ? snap.data() : null;
+              if (!target) { if (old && old.status !== 'Resolved') tx.update(ref, { status: 'Resolved', updatedAt: stamp() }); return; }
+              if (old && old.fingerprint === target.fingerprint && old.status !== 'Resolved') return;
+              tx.set(ref, { ...target, studentId: uid, student_uid: uid, studentName: students.get(uid) || 'Student', status: 'Open',
+                reason: 'Low summative performance and recent negative emotional flags', createdAt: old?.createdAt || stamp(), updatedAt: stamp() });
+            });
+          }
+        }
+      } catch (error) { state.textContent = `Care engine needs attention: ${error.message}. It will retry when records reconnect.`; evaluated = -1; }
+      finally { running = false; }
+    }
+    const listen = (query, name, affectsEngine = true) => {
       ready.set(name, false);
       stops.push(query.onSnapshot({ includeMetadataChanges: true }, snapshot => {
         if (token !== generation) return;
@@ -85,6 +110,7 @@
         state.textContent = confirmed ? 'Live · care alerts monitoring active' : 'Waiting for confirmed records; correlation paused';
         render();
         window.dispatchEvent(new CustomEvent('classcare:live-data', { detail: data }));
+        if (affectsEngine) revision++; void evaluate();
       }, error => { if (token !== generation) return; failures.add(name); ready.set(name, false); state.textContent = `${name} unavailable: ${error.message}. Correlation paused.`; render(); }));
     };
     listen(ownScores, 'scores');
@@ -92,8 +118,9 @@
     listen(ClassCare.DB.emotional_checkins.where('date', '>=', cutoff), 'checks');
     listen(ClassCare.DB.attendance.where('date', '>=', cutoff), 'attendance');
     listen(ClassCare.DB.users, 'users');
-    listen(ClassCare.DB.grades, 'grades');
-    listen(user.role === 'admin' ? ClassCare.collection('careAlerts') : ownAlerts, 'alerts');
+    listen(ClassCare.DB.grades, 'grades', false);
+    listen(user.role === 'admin' ? ClassCare.collection('careAlerts') : ownAlerts, 'alerts', false);
+    timer = setInterval(() => { revision++; void evaluate(); }, 60000);
   }
   const stopAuth = ClassCare.onCurrentUser(user => {
     cleanup(); if (!user || user.__profileError || user.disabled || (user.role === 'teacher' && user.pending_approval !== false)) return;

@@ -1222,6 +1222,9 @@ function onCurrentUser(callback) {
     const services = getFirebase();
     const emit = value => {
       if (value && (!window.ProtectedRoute || !window.ProtectedRoute(value, location.pathname))) {
+        if (!window.ProtectedRoute || !window.ProtectedRoute(value, '/index.html')) {
+          services?.auth?.signOut?.()?.catch?.(() => {});
+        }
         // Reload destroys listeners, chart state and previously rendered private records.
         if (/\/(admin|teacher|student)(?:\/|$)/.test(location.pathname)) location.replace('/index.html');
         value = null;

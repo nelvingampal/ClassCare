@@ -68,7 +68,7 @@ async function seedDemo() {
       account = await response.json();
     }
     if (!response.ok || !account.localId) throw Error(`Could not prepare synthetic ${role} account: ${account.error?.message || response.status}`);
-    const profile = { uid: account.localId, email, role, first_name: 'Demo', last_name: role,
+    const profile = { uid: account.localId, email, username: role, role, first_name: 'Demo', last_name: role,
       section: 'Demo Class A', pending_approval: false, disabled: false,
       enrollment_status: 'enrolled', assigned_sections: role === 'teacher' ? ['Demo Class A'] : [],
       student_id: role === 'student' ? 'DEMO-001' : '' };
@@ -77,6 +77,18 @@ async function seedDemo() {
     });
     if (!saved.ok) throw Error(`Could not save synthetic ${role} profile: HTTP ${saved.status}`);
   }
+  const settings = {
+    morning_start: '07:30',
+    morning_late_cutoff: '07:45',
+    enrollment_open: true,
+    enrollment_status: 'OPEN',
+    academic_year: '2026-2027',
+    master_sections: ['Demo Class A', 'Grade 7 - Section A', 'Grade 8 - Section A']
+  };
+  const savedSettings = await request(`${FIRESTORE}/v1/projects/${PROJECT}/databases/(default)/documents/settings/global`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer owner' }, body: JSON.stringify({ fields: fields(settings) })
+  });
+  if (!savedSettings.ok) throw Error(`Could not save synthetic global settings: HTTP ${savedSettings.status}`);
 }
 
 async function main() {
